@@ -23,17 +23,22 @@ deploy() {
   login
   echo "Deploying..."
   HOST_GIT_COMMIT=$(echo $(git ls-remote https://github.com/RedHatInsights/insights-host-inventory HEAD) | cut -d ' ' -f1)
-  RBAC_UI_GIT_COMMIT=$(echo $(git ls-remote https://github.com/RedHatInsights/insights-rbac-ui HEAD) | cut -d ' ' -f1)
+  HOST_FRONTEND_GIT_COMMIT=$(echo $(git ls-remote https://github.com/RedHatInsights/insights-inventory-frontend HEAD) | cut -d ' ' -f1 | cut -c1-7)
   bonfire deploy host-inventory -F true -p host-inventory/RBAC_V2_FORCE_ORG_ADMIN=true \
+  -p host-inventory/URLLIB3_LOG_LEVEL=WARN \
+  --ref-env insights-stage \
   -p host-inventory/CONSUMER_MQ_BROKER=rbac-kafka-kafka-bootstrap:9092  \
   --set-template-ref host-inventory="${HOST_GIT_COMMIT}"  \
   -p rbac/V2_APIS_ENABLED=True -p rbac/V2_READ_ONLY_API_MODE=False -p rbac/V2_BOOTSTRAP_TENANT=True \
   -p rbac/REPLICATION_TO_RELATION_ENABLED=True -p rbac/BYPASS_BOP_VERIFICATION=True \
   -p rbac/KAFKA_ENABLED=False -p rbac/NOTIFICATONS_ENABLED=False \
   -p rbac/NOTIFICATIONS_RH_ENABLED=False \
+  --set-image-tag quay.io/cloudservices/insights-inventory=latest \
+  --set-image-tag quay.io/cloudservices/insights-inventory-frontend="${HOST_FRONTEND_GIT_COMMIT}" \
+  --set-image-tag quay.io/redhat-services-prod/hcc-platex-services/chrome-service=latest \
   --set-image-tag quay.io/redhat-services-prod/hcc-accessmanagement-tenant/insights-rbac=latest \
   -p host-inventory/BYPASS_RBAC=false \
-  --set-image-tag quay.io/redhat-services-prod/rh-platform-experien-tenant/insights-rbac-ui="${RBAC_UI_GIT_COMMIT}"
+  --set-image-tag quay.io/redhat-services-prod/rh-platform-experien-tenant/insights-rbac-ui=latest
 
   setup_debezium
 }
@@ -45,6 +50,28 @@ setup_debezium() {
   chmod 0700 kafka.sh
   ./kafka.sh -n `oc project -q`
   cd ..
+
+  setup_kessel
+}
+
+setup_kessel() {
+  echo "Kessel inventory is setting up.."
+  bonfire deploy kessel -C kessel-inventory --set-image-tag quay.io/redhat-services-prod/project-kessel-tenant/kessel-inventory/inventory-api=latest
+
+  setup_sink_connector
+}
+
+setup_sink_connector() {
+  echo "Relations sink connector is setting up.."
+  NAMESPACE=`oc project -q`
+  BOOTSTRAP_SERVERS=$(oc get svc -n $NAMESPACE -o json | jq -r '.items[] | select(.metadata.name | test("^rbac-kafka.*-kafka-bootstrap")) | "\(.metadata.name).\(.metadata.namespace).svc"')
+  RELATIONS_SINK_IMAGE=quay.io/cloudservices/kafka-relations-sink
+  IMAGE_TAG=latest
+  bonfire deploy kessel -C relations-sink-ephemeral \
+   -p relations-sink-ephemeral/NAMESPACE=$NAMESPACE \
+   -p relations-sink-ephemeral/RELATIONS_SINK_IMAGE=$RELATIONS_SINK_IMAGE \
+   -p relations-sink-ephemeral/BOOTSTRAP_SERVERS=$BOOTSTRAP_SERVERS \
+   -p relations-sink-ephemeral/IMAGE_TAG=$IMAGE_TAG
 }
 
 download_debezium_configuration() {
