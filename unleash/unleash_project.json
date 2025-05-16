@@ -1,0 +1,48 @@
+{
+  "project": "default",
+  "environment": "development",
+  "data": {
+    "features": [
+      {
+        "name": "hbi.api.kessel-workspace-migration",
+        "description": "Gates the functionality for Phase 0 of the HBI Kessel migration (RHINENG-15827).",
+        "type": "release",
+        "project": "default",
+        "stale": false,
+        "impressionData": false,
+        "archived": false
+      }
+    ],
+    "featureStrategies": [
+      {
+        "name": "flexibleRollout",
+        "id": "86a0f037-be42-45c5-a924-1bbb2dc5594e",
+        "featureName": "hbi.api.kessel-workspace-migration",
+        "title": null,
+        "parameters": {
+          "groupId": "hbi.api.kessel-workspace-migration",
+          "rollout": "100",
+          "stickiness": "default"
+        },
+        "constraints": [],
+        "variants": [],
+        "disabled": false,
+        "segments": []
+      }
+    ],
+    "featureEnvironments": [
+      {
+        "enabled": true,
+        "featureName": "hbi.api.kessel-workspace-migration",
+        "environment": "development",
+        "variants": [],
+        "name": "hbi.api.kessel-workspace-migration"
+      }
+    ],
+    "contextFields": [],
+    "featureTags": [],
+    "segments": [],
+    "tagTypes": [],
+    "dependencies": []
+  }
+}

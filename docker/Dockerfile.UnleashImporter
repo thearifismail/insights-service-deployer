@@ -1,0 +1,38 @@
+FROM registry.access.redhat.com/ubi9/ubi-minimal:9.5-1747111267
+
+USER root
+
+# Disable all repos except for ubi repos, as ubi repos don't require auth;
+# this makes the container buildable without needing RHEL repos.
+RUN microdnf \
+  --disablerepo=* \
+  --enablerepo=ubi-9-appstream-rpms \
+  --enablerepo=ubi-9-baseos-rpms \
+  install -y jq bash
+
+# ConfigMap is mounted here, but in kessel we ignore it because we bundle config in the image directly.
+RUN mkdir /unleash
+
+WORKDIR /opt/unleash
+
+# This is the file that defines the entire unleash project, including feature flags, environments and statuses.
+COPY unleash/unleash_project.json unleash/import-features.sh .
+
+# This image is intended to be run using a bonfire command like:
+# bonfire deploy rhsm --timeout=1800 --optional-deps-method none  \
+#     --frontends false --no-remove-resources app:rhsm \
+#     -C rhsm -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE=quay.io/mstead/swatch-unleash-import \
+#     -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE_TAG=$YOUR_IMAGE_TAG
+# (See https://github.com/RedHatInsights/rhsm-subscriptions/tree/main/swatch-unleash-import.)
+#
+# We are re-using rhsm-subscriptions' good work by taking their deployment template and a modified Dockerfile and
+# import script to apply our feature flags in kessel.
+
+# The rhsm ClowdApp ephemeral config (https://github.com/RedHatInsights/rhsm-subscriptions/blob/main/deploy/rhsm-clowdapp.yaml)
+# that runs the swatch-unleash-import component supplies this image with two arguments, overriding the ones below.
+# This template also takes the flags from a ConfigMap mounted at /unleash, but we don't own it so we can't use it, so
+# instead a customised import-features.sh script takes a hard coded flags file from /opt/unleash/flags.json, instead of
+# the /unleash/flags.json supplied by a volume from the ConfigMap. This is a bit of hack, but it allows us to use the
+# rhsm deployment template without the need to add another component to kessel ephemeral, which is nice.
+
+CMD ["/bin/bash", "/opt/unleash/import-features.sh", "/opt/unleash/flags.json"]
