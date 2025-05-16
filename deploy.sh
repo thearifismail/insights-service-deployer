@@ -33,6 +33,20 @@ deploy() {
   -p rbac/REPLICATION_TO_RELATION_ENABLED=True -p rbac/BYPASS_BOP_VERIFICATION=True \
   -p rbac/KAFKA_ENABLED=False -p rbac/NOTIFICATONS_ENABLED=False \
   -p rbac/NOTIFICATIONS_RH_ENABLED=False \
+ -p rbac/ROLE_CREATE_ALLOW_LIST="remediations,\
+inventory,\
+policies,\
+advisor,\
+vulnerability,\
+compliance,\
+automation-analytics,\
+notifications,\
+patch,\
+integrations,\
+ros,\
+staleness,\
+config-manager,\
+idmsvc" \
   --set-image-tag quay.io/cloudservices/insights-inventory=latest \
   --set-image-tag quay.io/cloudservices/insights-inventory-frontend="${HOST_FRONTEND_GIT_COMMIT}" \
   --set-image-tag quay.io/redhat-services-prod/hcc-platex-services/chrome-service=latest \
