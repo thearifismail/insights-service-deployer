@@ -10,7 +10,7 @@
     "credentials": [
       {
         "type": "password",
-        "value": "redhatqa",
+        "value": "some_password",
         "temporary": false
       }
     ],
@@ -46,7 +46,7 @@
     "credentials": [
       {
         "type": "password",
-        "value": "redhatqa",
+        "value": "some_password",
         "temporary": false
       }
     ],
