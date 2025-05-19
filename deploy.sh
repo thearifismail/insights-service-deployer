@@ -86,6 +86,8 @@ setup_sink_connector() {
    -p relations-sink-ephemeral/RELATIONS_SINK_IMAGE=$RELATIONS_SINK_IMAGE \
    -p relations-sink-ephemeral/BOOTSTRAP_SERVERS=$BOOTSTRAP_SERVERS \
    -p relations-sink-ephemeral/IMAGE_TAG=$IMAGE_TAG
+
+   deploy_unleash_importer_image
 }
 
 download_debezium_configuration() {
@@ -124,6 +126,52 @@ clean_download_debezium_configuration() {
   rm -rf scripts
 }
 
+build_unleash_importer_image() {
+  # This function can probably be split out of the main deploy in the future, since, if the feature flags rarely change,
+  # there will be no need to rebuild the image. By attempting to run it every time for now, we at least test this part
+  # of the script. (The build part is pretty quick anyway.)
+  echo "Attempting to build and push custom unleash image to set feature flags..."
+
+  if ! hash podman 2>/dev/null; then
+    echo "Podman is not installed (and user is also not logged onto quay with podman) -- but don't worry! -- defaulting to pre-built image (quay.io/mmclaugh/kessel-unleash-import:latest) in deployment."
+  else
+    quay_user=$(podman login --get-login quay.io 2>/dev/null || true)
+    if [[ -z "${quay_user}" ]]; then
+      echo "Current user is not logged into quay with podman -- but don't worry! -- defaulting to pre-built image (quay.io/mmclaugh/kessel-unleash-import:latest) in deployment."
+    else
+      IMAGE="quay.io/$quay_user/kessel-unleash-import"
+      TAG="latest"
+      IMAGE_TAG="$IMAGE:$TAG"
+      podman build --platform linux/amd64 . -f docker/Dockerfile.UnleashImporter -t "$IMAGE_TAG"
+      podman push "$IMAGE_TAG"
+      podman rmi "$IMAGE_TAG"
+      echo "Image built, pushed to $IMAGE_TAG and deleted locally."
+      echo "Note: Your quay.io repo needs to be public for the image to be pulled for ephemeral deployments!"
+      UNLEASH_IMAGE="$IMAGE"
+      UNLEASH_TAG="$TAG"
+    fi
+  fi
+}
+
+deploy_unleash_importer_image() {
+  echo "Deploy kessel unleash importer image with feature flags..."
+  build_unleash_importer_image
+
+  if [[ -z "${UNLEASH_IMAGE}" || -z "${UNLEASH_TAG}" ]]; then
+    UNLEASH_IMAGE=quay.io/mmclaugh/kessel-unleash-import
+    UNLEASH_TAG=latest
+  fi
+
+  # Ensure clowdjobinvocations from a prior run are deleted, so that new bonfire run resets flags
+  oc delete --ignore-not-found=true --wait=true clowdjobinvocation/swatch-unleash-import-1
+
+  # Starts the job that runs the unleash feature flag import
+  bonfire deploy rhsm --timeout=1800 --optional-deps-method none  \
+    --frontends false --no-remove-resources app:rhsm \
+    -C rhsm -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE="$UNLEASH_IMAGE" \
+    -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE_TAG="$UNLEASH_TAG"
+}
+
 usage() {
   echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|clean_download_debezium_configuration}"
   exit 1
@@ -138,6 +186,9 @@ case "$1" in
     ;;
   clean_download_debezium_configuration)
     clean_download_debezium_configuration
+    ;;
+  deploy_unleash_importer_image)
+    deploy_unleash_importer_image
     ;;
   *)
     usage
