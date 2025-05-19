@@ -11,6 +11,24 @@
         "stale": false,
         "impressionData": false,
         "archived": false
+      },
+      {
+        "name": "platform.rbac.workspaces-list",
+        "description": "Enable UI workspace section with v1 role creation wizard.",
+        "type": "release",
+        "project": "default",
+        "stale": false,
+        "impressionData": false,
+        "archived": false
+      },
+      {
+        "name": "platform.rbac.workspaces",
+        "description": "Enable UI workspace section with v2 role creation wizard.",
+        "type": "release",
+        "project": "default",
+        "stale": false,
+        "impressionData": false,
+        "archived": false
       }
     ],
     "featureStrategies": [
@@ -28,6 +46,36 @@
         "variants": [],
         "disabled": false,
         "segments": []
+      },
+      {
+        "name": "flexibleRollout",
+        "id": "7c916df0-7463-4820-960f-43dcd054b6f1",
+        "featureName": "platform.rbac.workspaces-list",
+        "title": null,
+        "parameters": {
+          "groupId": "platform.rbac.workspaces-list",
+          "rollout": "100",
+          "stickiness": "default"
+        },
+        "constraints": [],
+        "variants": [],
+        "disabled": false,
+        "segments": []
+      },
+      {
+        "name": "flexibleRollout",
+        "id": "027cf6d1-cb00-4314-834e-cf2626665431",
+        "featureName": "platform.rbac.workspaces",
+        "title": null,
+        "parameters": {
+          "groupId": "platform.rbac.workspaces",
+          "rollout": "100",
+          "stickiness": "default"
+        },
+        "constraints": [],
+        "variants": [],
+        "disabled": false,
+        "segments": []
       }
     ],
     "featureEnvironments": [
@@ -37,6 +85,20 @@
         "environment": "development",
         "variants": [],
         "name": "hbi.api.kessel-workspace-migration"
+      },
+      {
+        "enabled": true,
+        "featureName": "platform.rbac.workspaces-list",
+        "environment": "development",
+        "variants": [],
+        "name": "platform.rbac.workspaces-list"
+      },
+      {
+        "enabled": false,
+        "featureName": "platform.rbac.workspaces",
+        "environment": "development",
+        "variants": [],
+        "name": "platform.rbac.workspaces"
       }
     ],
     "contextFields": [],

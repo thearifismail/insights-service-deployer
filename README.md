@@ -51,9 +51,23 @@ will give a gaterway URL wit jdoe|<password>
 
 ### Notes
 
-1. The script sets unleash features flags as per `unleash/unleash_project.json`. It will build and deploy
-an image with those feature flags and apply them with bonfire. (If you are not logged into podman it will just 
-use/deploy whatever flags are in `quay.io/mmclaugh/kessel-unleash-import` instead.)
+#### Unleash Feature Flags Script
+
+1. The script sets Unleash feature flags based on `unleash/unleash_project.json`.  
+   It then builds and deploys an image with these feature flags and applies them using **bonfire**.
+
+#### Possible scenarios
+
+#### A. Not Logged into Podman 
+(recommended if you don't need to set up your own feature flags)
+
+- The script will use the image from `quay.io/mmclaugh/kessel-unleash-import`, which already contains the feature flags.
+
+#### B. Logged into Podman
+
+- The script will create a repository named `kessel-unleash-import` in **your quay account**.
+- **Note:** This may fail the first time — you need to **make the repository public** manually.
+
 
 ### Checks
 To check unleash feature flags manually:

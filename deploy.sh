@@ -187,6 +187,9 @@ case "$1" in
   clean_download_debezium_configuration)
     clean_download_debezium_configuration
     ;;
+  deploy_unleash_importer_image)
+    deploy_unleash_importer_image
+    ;;
   *)
     usage
     ;;
