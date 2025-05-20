@@ -65,6 +65,18 @@ setup_debezium() {
   ./kafka.sh -n `oc project -q`
   cd ..
 
+  RBAC_KAFKA_POD=rbac-kafka-kafka-0
+  until oc get pod $RBAC_KAFKA_POD  > /dev/null 2>&1; do
+    echo "Waiting for pod ${RBAC_KAFKA_POD} to be created..."
+    sleep 5
+  done
+
+  oc wait pod $RBAC_KAFKA_POD --for=condition=Ready --timeout=60s
+
+  oc rsh $RBAC_KAFKA_POD /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server=rbac-kafka-kafka-bootstrap:9092 \
+  --create --topic outbox.event.workspace --partitions 3 --replication-factor 1
+
   setup_kessel
 }
 
@@ -187,8 +199,8 @@ case "$1" in
   clean_download_debezium_configuration)
     clean_download_debezium_configuration
     ;;
-  deploy_unleash_importer_image)
-    deploy_unleash_importer_image
+  setup_debezium)
+    setup_debezium
     ;;
   *)
     usage
