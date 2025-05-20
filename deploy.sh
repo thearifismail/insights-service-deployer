@@ -205,7 +205,7 @@ add_hosts_to_hbi() {
 }
 
 usage() {
-  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|clean_download_debezium_configuration}"
+  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi}"
   exit 1
 }
 
