@@ -184,8 +184,40 @@ deploy_unleash_importer_image() {
     -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE_TAG="$UNLEASH_TAG"
 }
 
+add_hosts_to_hbi() {
+  # Optional arguments: $1: org_id, $2: number of hosts to add
+  ORG_ID=12345
+  NUM_HOSTS=10
+
+  if [ -n "$1" ]; then
+    ORG_ID="$1"
+    if [ -n "$2" ]; then
+      NUM_HOSTS="$2"
+    fi
+  fi
+
+  HOST_INVENTORY_READ_POD=$(oc get pods -l pod=host-inventory-service-reads --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+  HOST_INVENTORY_DB_POD=$(oc get pods -l app=host-inventory,service=db,sub=local_db --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+  HBI_BOOTSTRAP_SERVERS=$(oc get svc -o json | jq -r '.items[] | select(.metadata.name | test("^env-ephemeral.*-kafka-bootstrap")) | "\(.metadata.name).\(.metadata.namespace).svc"')
+  BEFORE_COUNT=$(oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"select count(*) from hbi.hosts;\"" | head -3 | tail -1 | tr -d '[:space:]')
+  TARGET_COUNT=$((BEFORE_COUNT + NUM_HOSTS))
+  AFTER_COUNT=$BEFORE_COUNT
+
+  echo "Sending ${NUM_HOSTS} hosts to hbi using kafka producer..."
+  oc exec -it -c host-inventory-service-reads "$HOST_INVENTORY_READ_POD" -- /bin/bash -c 'NUM_HOSTS="$1" KAFKA_BOOTSTRAP_SERVERS="$2" python3 utils/kafka_producer.py' _ "$NUM_HOSTS" "$HBI_BOOTSTRAP_SERVERS"
+
+  until [ "$AFTER_COUNT" == "$TARGET_COUNT" ]; do
+    echo "Waiting for ${NUM_HOSTS} hosts added via kafka to sync to the hbi db... [AFTER_COUNT: ${AFTER_COUNT}, TARGET_COUNT: ${TARGET_COUNT}]"
+    sleep 3
+    AFTER_COUNT=$(oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"select count(*) from hbi.hosts;\"" | head -3 | tail -1 | tr -d '[:space:]')
+  done
+
+  echo "Setting org_id=${ORG_ID} for ${AFTER_COUNT} hosts..."
+  oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"UPDATE hbi.hosts SET org_id='${ORG_ID}';\""
+}
+
 usage() {
-  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|clean_download_debezium_configuration}"
+  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi}"
   exit 1
 }
 
@@ -201,6 +233,10 @@ case "$1" in
     ;;
   setup_debezium)
     setup_debezium
+    ;;
+  add_hosts_to_hbi)
+    # $2 is ORG_ID, $3 is the number of hosts to add
+    add_hosts_to_hbi "$2" "$3"
     ;;
   *)
     usage

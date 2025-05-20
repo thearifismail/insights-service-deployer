@@ -29,25 +29,23 @@ access managed with rbac and queried with kessel.
 1. Ensure the deploy.sh script has run correctly, above.
 2. Create test hosts in HBI:
 ```shell
-# To populate hosts in a WS - note change the pod name
-oc exec -it host-inventory-service-reads-78689bfb96-qhnpr -- /bin/bash
-# Note: grab the Kafka-bootstrap from NS->service and change it below
-NUM_HOSTS=10 KAFKA_BOOTSTRAP_SERVERS=env-ephemeral-7cks0f-da03ec58-kafka-bootstrap.ephemeral-7cks0f.svc:9092 python3 utils/kafka_producer.py
+./deploy.sh add_hosts_to_hbi # adds 10 hosts with org_id 12345 by default
 ```
-3. Assign hosts to the correct org:
+or
 ```shell
-oc exec -it host-inventory-db-9f6f46699-gwncm -- /bin/bash
-psql
-\c host-inventory
-UPDATE hbi.hosts SET org_id='12345'
+./deploy.sh add_hosts_to_hbi 12345 # adds 10 hosts by default with org_id 12345
 ```
-4. Login to console:
+or
+```shell
+./deploy.sh add_hosts_to_hbi 12345 10 # adds 10 hosts with org_id 12345
+```
+3. Login to console:
 ```shell
 bonfire namespace describe
 
 will give a gaterway URL wit jdoe|<password>
 ```
-5. Run some checks. e.g. create a workspace in the HBI and check that it replicates into spicedb.
+4. Run some checks. e.g. create a workspace in the HBI and check that it replicates into spicedb.
 
 ### Notes
 
