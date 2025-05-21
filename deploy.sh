@@ -216,8 +216,13 @@ add_hosts_to_hbi() {
   oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"UPDATE hbi.hosts SET org_id='${ORG_ID}';\""
 }
 
+add_users_to_hbi() {
+  echo "Importing users from data/rbac_users_data.json into hbi..."
+  scripts/rbac_load_users.sh
+}
+
 usage() {
-  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi}"
+  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|deploy_with_hbi_demo|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi|add_users_to_hbi}"
   exit 1
 }
 
@@ -228,6 +233,11 @@ case "$1" in
   deploy)
     deploy
     ;;
+  deploy_with_hbi_demo)
+    deploy
+    add_hosts_to_hbi
+    add_users_to_hbi
+    ;;
   clean_download_debezium_configuration)
     clean_download_debezium_configuration
     ;;
@@ -237,6 +247,9 @@ case "$1" in
   add_hosts_to_hbi)
     # $2 is ORG_ID, $3 is the number of hosts to add
     add_hosts_to_hbi "$2" "$3"
+    ;;
+  add_users_to_hbi)
+    add_users_to_hbi
     ;;
   *)
     usage
