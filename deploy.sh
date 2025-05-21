@@ -75,7 +75,7 @@ setup_debezium() {
 
   oc rsh $RBAC_KAFKA_POD /opt/kafka/bin/kafka-topics.sh \
   --bootstrap-server=rbac-kafka-kafka-bootstrap:9092 \
-  --create --topic outbox.event.workspace --partitions 3 --replication-factor 1
+  --create --if-not-exists --topic outbox.event.workspace --partitions 3 --replication-factor 1
 
   setup_kessel
 }
