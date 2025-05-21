@@ -26,7 +26,7 @@ eval $(echo "$json_output" | jq -r '
 MASTER_REALM_NAME="master"
 REALM_NAME="redhat-external"
 CLIENT_ID="admin-cli"
-JSON_FILE="../data/rbac_users_data.json"
+JSON_FILE="./data/rbac_users_data.json"
 
 TOKEN_RESPONSE=$(curl -s -X POST \
   "${KEYCLOAK_ADMIN_ROUTE}/realms/${MASTER_REALM_NAME}/protocol/openid-connect/token" \
