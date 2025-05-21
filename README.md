@@ -1,8 +1,18 @@
 # insights-service-deployer
 
+Note: Services used here are only available to Red Hat employees
+
+## Prerequisite
+
+- `oc` CLI needs to be installed [Can be downloaded from here](https://console-openshift-console.apps.crc-eph.r9lp.p1.openshiftapps.com/command-line-tools)
+- `bonfire` CLI needs to be installed [See installation guide](https://github.com/redhatinsights/bonfire)
+- Have access to the ephemeral environment (requires VPN)
+
 
 ## Deploy rbac, HBI service and the Kessel stack with dedicated kafka connect stack (debezium included)
 
+EPHEMERAL_SERVER is typically https://api.crc-eph.r9lp.p1.openshiftapps.com:6443
+EPHEMERAL_TOKEN can be obtained from https://oauth-openshift.apps.crc-eph.r9lp.p1.openshiftapps.com/oauth/token/request
 
 ```
 git clone git@github.com:project-kessel/insights-service-deployer.git
@@ -10,6 +20,10 @@ export EPHEMERAL_TOKEN=<> # get token from ephemeral cluster
 export EPHEMERAL_SERVER=<> # get server from ephemeral cluster
 ./deploy.sh deploy
 ```
+
+Once deployed, you can verify the deployment by typing `bonfire namespace describe` and you will get the URL to use to access the console (`Gateway route`) and credentials to use (`Default user login`).
+
+Note: Since this won't deploy all the services, the frontpage has no content beside the menu, this is expected. 
 
 ### Debugging
 
