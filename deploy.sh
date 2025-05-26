@@ -78,6 +78,19 @@ setup_debezium() {
   --bootstrap-server=rbac-kafka-kafka-bootstrap:9092 \
   --create --if-not-exists --topic outbox.event.workspace --partitions 3 --replication-factor 1
 
+  # Force re-seed of permissions, roles and groups when we are sure the replication slot has been created in rbac db
+  force_seed_rbac_acl_data_in_relations
+}
+
+# workaround for the case where seeding attempted before replication slot has been created for debezium and events are lost
+force_seed_rbac_acl_data_in_relations() {
+  echo "Force (re-)seeding of rbac acl data in kessel..."
+  echo "Wait for rbac debezium connector to be ready to ensure replication slot has been created..."
+  oc wait kafkaconnector/rbac-connector --for=condition=Ready --timeout=60s
+  echo "Run seeding script..."
+  RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+  oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships" | grep -F 'INFO: ***'
+
   setup_kessel
 }
 
