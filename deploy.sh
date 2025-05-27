@@ -86,7 +86,7 @@ setup_debezium() {
 force_seed_rbac_acl_data_in_relations() {
   echo "Force (re-)seeding of rbac acl data in kessel..."
   echo "Wait for rbac debezium connector to be ready to ensure replication slot has been created..."
-  oc wait kafkaconnector/rbac-connector --for=condition=Ready --timeout=60s
+  oc wait kafkaconnector/rbac-connector --for=condition=Ready --timeout=300s
   echo "Run seeding script..."
   RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
   oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships" | grep -F 'INFO: ***'
@@ -235,6 +235,17 @@ add_users_to_hbi() {
   scripts/rbac_load_users.sh
 }
 
+wait_for_sink_connector_ready() {
+  echo "Waiting for kessel sink connector to be ready..."
+  # For some reason, bonfire waits on kafkaconnect/inventory-kafka-connect during kessel-inventory deployment, but not
+  # on kafkaconnect/relations-sink during the sink connector deployment.
+  oc wait kafkaconnector/relations-sink-connector --for=condition=Ready --timeout=300s
+}
+
+show_bonfire_namespace() {
+  bonfire namespace describe
+}
+
 usage() {
   echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|deploy_with_hbi_demo|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi|add_users_to_hbi}"
   exit 1
@@ -246,11 +257,15 @@ case "$1" in
     ;;
   deploy)
     deploy
+    wait_for_sink_connector_ready
+    show_bonfire_namespace
     ;;
   deploy_with_hbi_demo)
     deploy
     add_hosts_to_hbi
     add_users_to_hbi
+    wait_for_sink_connector_ready
+    show_bonfire_namespace
     ;;
   clean_download_debezium_configuration)
     clean_download_debezium_configuration
