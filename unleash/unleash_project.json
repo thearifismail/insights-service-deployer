@@ -13,6 +13,22 @@
         "archived": false
       },
       {
+        "name": "hbi.api.kessel-host-migration",
+        "description": "Gates the functionality for Phase 1 of the HBI Kessel migration (RHCLOUD-39540).",
+        "type": "release",
+        "project": "default",
+        "stale": false,
+        "enabled": false,
+        "strategies": [
+            {
+                "name": "default",
+                "parameters": {}
+            }
+        ],
+        "variants": [],
+        "createdAt": "2025-04-17T21:21:08Z"
+      },
+      {
         "name": "platform.rbac.workspaces-list",
         "description": "Enable UI workspace section with v1 role creation wizard.",
         "type": "release",
@@ -39,6 +55,21 @@
         "title": null,
         "parameters": {
           "groupId": "hbi.api.kessel-workspace-migration",
+          "rollout": "100",
+          "stickiness": "default"
+        },
+        "constraints": [],
+        "variants": [],
+        "disabled": false,
+        "segments": []
+      },
+      {
+        "name": "flexibleRollout",
+        "id": "288a4a5c-3bd3-11f0-bc1d-2ae3752e2811",
+        "featureName": "hbi.api.kessel-host-migration",
+        "title": null,
+        "parameters": {
+          "groupId": "hbi.api.kessel-host-migration",
           "rollout": "100",
           "stickiness": "default"
         },
@@ -85,6 +116,13 @@
         "environment": "development",
         "variants": [],
         "name": "hbi.api.kessel-workspace-migration"
+      },
+      {
+        "enabled": true,
+        "featureName": "hbi.api.kessel-host-migration",
+        "environment": "development",
+        "variants": [],
+        "name": "hbi.api.kessel-host-migration"
       },
       {
         "enabled": true,

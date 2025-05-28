@@ -28,7 +28,7 @@ deploy() {
   -p host-inventory/URLLIB3_LOG_LEVEL=WARN \
   --ref-env insights-stage \
   -p host-inventory/CONSUMER_MQ_BROKER=rbac-kafka-kafka-bootstrap:9092  \
-  --set-template-ref host-inventory="${HOST_GIT_COMMIT}"  \
+  --set-template-ref host-inventory=add-kessel-client  \
   -p rbac/V2_APIS_ENABLED=True -p rbac/V2_READ_ONLY_API_MODE=False -p rbac/V2_BOOTSTRAP_TENANT=True \
   -p rbac/REPLICATION_TO_RELATION_ENABLED=True -p rbac/BYPASS_BOP_VERIFICATION=True \
   -p rbac/KAFKA_ENABLED=False -p rbac/NOTIFICATONS_ENABLED=False \
@@ -279,6 +279,9 @@ case "$1" in
     ;;
   add_users_to_hbi)
     add_users_to_hbi
+    ;;
+  deploy_unleash_importer_image)
+    deploy_unleash_importer_image
     ;;
   *)
     usage
