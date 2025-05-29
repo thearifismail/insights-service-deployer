@@ -22,6 +22,12 @@ release_current_namespace() {
 deploy() {
   login
   echo "Deploying..."
+
+  NAMESPACE=`oc project -q`
+  if [[ -z $NAMESPACE ]]; then
+    bonfire namespace reserve --duration 10h
+    NAMESPACE=`oc project -q`
+  fi
   HOST_GIT_COMMIT=$(echo $(git ls-remote https://github.com/RedHatInsights/insights-host-inventory HEAD) | cut -d ' ' -f1)
   HOST_FRONTEND_GIT_COMMIT=$(echo $(git ls-remote https://github.com/RedHatInsights/insights-inventory-frontend HEAD) | cut -d ' ' -f1 | cut -c1-7)
   bonfire deploy host-inventory -F true -p host-inventory/RBAC_V2_FORCE_ORG_ADMIN=true \
@@ -48,7 +54,9 @@ staleness,\
 config-manager,\
 idmsvc" \
   -p rbac/V2_MIGRATION_APP_EXCLUDE_LIST="approval" \
-  --set-image-tag quay.io/cloudservices/insights-inventory=latest \
+  -p host-inventory/IMAGE=quay.io/wscalf/host-inventory \
+  -p host-inventory/KESSEL_TARGET_URL=kessel-inventory-api.$NAMESPACE.svc.cluster.local:9000 \
+  --set-image-tag quay.io/wscalf/host-inventory=latest \
   --set-image-tag quay.io/cloudservices/insights-inventory-frontend="${HOST_FRONTEND_GIT_COMMIT}" \
   --set-image-tag quay.io/redhat-services-prod/hcc-platex-services/chrome-service=latest \
   --set-image-tag quay.io/redhat-services-prod/hcc-accessmanagement-tenant/insights-rbac=latest \
