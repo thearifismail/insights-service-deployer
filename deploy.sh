@@ -56,7 +56,7 @@ idmsvc" \
   -p rbac/V2_MIGRATION_APP_EXCLUDE_LIST="approval" \
   -p host-inventory/IMAGE=quay.io/wscalf/host-inventory \
   -p host-inventory/KESSEL_TARGET_URL=kessel-inventory-api.$NAMESPACE.svc.cluster.local:9000 \
-  --set-image-tag quay.io/wscalf/host-inventory=latest \
+  --set-image-tag quay.io/wscalf/host-inventory=experimental \
   --set-image-tag quay.io/cloudservices/insights-inventory-frontend="${HOST_FRONTEND_GIT_COMMIT}" \
   --set-image-tag quay.io/redhat-services-prod/hcc-platex-services/chrome-service=latest \
   --set-image-tag quay.io/redhat-services-prod/hcc-accessmanagement-tenant/insights-rbac=latest \
