@@ -56,7 +56,7 @@ idmsvc" \
   -p rbac/V2_MIGRATION_APP_EXCLUDE_LIST="approval" \
   -p host-inventory/IMAGE=quay.io/wscalf/host-inventory \
   -p host-inventory/KESSEL_TARGET_URL=kessel-inventory-api.$NAMESPACE.svc.cluster.local:9000 \
-  --set-image-tag quay.io/wscalf/host-inventory=experimental \
+  --set-image-tag quay.io/wscalf/host-inventory=experiment-and-payload \
   --set-image-tag quay.io/cloudservices/insights-inventory-frontend="${HOST_FRONTEND_GIT_COMMIT}" \
   --set-image-tag quay.io/redhat-services-prod/hcc-platex-services/chrome-service=latest \
   --set-image-tag quay.io/redhat-services-prod/hcc-accessmanagement-tenant/insights-rbac=latest \
@@ -226,7 +226,7 @@ add_hosts_to_hbi() {
   AFTER_COUNT=$BEFORE_COUNT
 
   echo "Sending ${NUM_HOSTS} hosts to hbi using kafka producer..."
-  oc exec -it -c host-inventory-service-reads "$HOST_INVENTORY_READ_POD" -- /bin/bash -c 'NUM_HOSTS="$1" KAFKA_BOOTSTRAP_SERVERS="$2" python3 utils/kafka_producer.py' _ "$NUM_HOSTS" "$HBI_BOOTSTRAP_SERVERS"
+  oc exec -it -c host-inventory-service-reads "$HOST_INVENTORY_READ_POD" -- /bin/bash -c 'NUM_HOSTS="$1" INVENTORY_HOST_ACCOUNT=1234 KAFKA_BOOTSTRAP_SERVERS="$2" python3 utils/kafka_producer.py' _ "$NUM_HOSTS" "$HBI_BOOTSTRAP_SERVERS"
 
   until [ "$AFTER_COUNT" == "$TARGET_COUNT" ]; do
     echo "Waiting for ${NUM_HOSTS} hosts added via kafka to sync to the hbi db... [AFTER_COUNT: ${AFTER_COUNT}, TARGET_COUNT: ${TARGET_COUNT}]"
@@ -234,8 +234,8 @@ add_hosts_to_hbi() {
     AFTER_COUNT=$(oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"select count(*) from hbi.hosts;\"" | head -3 | tail -1 | tr -d '[:space:]')
   done
 
-  echo "Setting org_id=${ORG_ID} for ${AFTER_COUNT} hosts..."
-  oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"UPDATE hbi.hosts SET org_id='${ORG_ID}';\""
+  #echo "Setting org_id=${ORG_ID} for ${AFTER_COUNT} hosts..."
+  #oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"UPDATE hbi.hosts SET org_id='${ORG_ID}';\""
 }
 
 add_users_to_hbi() {
