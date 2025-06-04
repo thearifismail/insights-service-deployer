@@ -13,6 +13,14 @@ login() {
   oc login --token="${EPHEMERAL_TOKEN}" --server=${EPHEMERAL_SERVER}
 }
 
+check_bonfire_namespace() {
+  NAMESPACE=`oc project -q 2>/dev/null || true`
+  if [[ -z $NAMESPACE ]]; then
+    echo "No bonfire namespace set, reserving a namespace for you now (duration 10hr)..."
+    bonfire namespace reserve --duration 10h
+  fi
+}
+
 release_current_namespace() {
   echo "Releasing current environment.."
   login
@@ -23,12 +31,7 @@ release_current_namespace() {
 deploy() {
   echo "Deploying..."
 
-  NAMESPACE=`oc project -q 2>/dev/null || true`
-  if [[ -z $NAMESPACE ]]; then
-    echo "No bonfire namespace set, reserving a namespace for you now (duration 10hr)..."
-    bonfire namespace reserve --duration 10h
-    NAMESPACE=`oc project -q`
-  fi
+  NAMESPACE=`oc project -q`
 
   HBI_CUSTOM_IMAGE="quay.io/cloudservices/insights-inventory"
   HBI_CUSTOM_IMAGE_TAG=latest
@@ -241,16 +244,13 @@ add_hosts_to_hbi() {
   AFTER_COUNT=$BEFORE_COUNT
 
   echo "Sending ${NUM_HOSTS} hosts to hbi using kafka producer..."
-  oc exec -it -c host-inventory-service-reads "$HOST_INVENTORY_READ_POD" -- /bin/bash -c 'NUM_HOSTS="$1" INVENTORY_HOST_ACCOUNT=1234 KAFKA_BOOTSTRAP_SERVERS="$2" python3 utils/kafka_producer.py' _ "$NUM_HOSTS" "$HBI_BOOTSTRAP_SERVERS"
+  oc exec -it -c host-inventory-service-reads "$HOST_INVENTORY_READ_POD" -- /bin/bash -c 'NUM_HOSTS="$1" INVENTORY_HOST_ACCOUNT="$2" KAFKA_BOOTSTRAP_SERVERS="$3" python3 utils/kafka_producer.py' _ "$NUM_HOSTS" "$ORG_ID" "$HBI_BOOTSTRAP_SERVERS"
 
   until [ "$AFTER_COUNT" == "$TARGET_COUNT" ]; do
     echo "Waiting for ${NUM_HOSTS} hosts added via kafka to sync to the hbi db... [AFTER_COUNT: ${AFTER_COUNT}, TARGET_COUNT: ${TARGET_COUNT}]"
-    sleep 3
+    sleep 5
     AFTER_COUNT=$(oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"select count(*) from hbi.hosts;\"" | head -3 | tail -1 | tr -d '[:space:]')
   done
-
-  #echo "Setting org_id=${ORG_ID} for ${AFTER_COUNT} hosts..."
-  #oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"UPDATE hbi.hosts SET org_id='${ORG_ID}';\""
 }
 
 add_users_to_hbi() {
@@ -280,6 +280,7 @@ case "$1" in
     ;;
   deploy)
     login
+    check_bonfire_namespace
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4"
     wait_for_sink_connector_ready
@@ -287,6 +288,7 @@ case "$1" in
     ;;
   deploy_with_hbi_demo)
     login
+    check_bonfire_namespace
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4"
     add_hosts_to_hbi
