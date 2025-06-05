@@ -1,9 +1,9 @@
 [
   {
-    "username": "rbac_admin",
+    "username": "hbi_admin",
     "firstName": "RBAC",
     "lastName": "Admin",
-    "email": "rbac_admin@redhat.com",
+    "email": "hbi_admin@redhat.com",
     "enabled": true,
     "emailVerified": true,
     "totp": false,
@@ -29,17 +29,17 @@
       "newEntitlements": [
         "\"insights\":{\"is_entitled\":true,\"is_trial\":false}"
       ],
-      "org_id": "1234567890",
+      "org_id": "12345",
       "permissions": [
         ""
       ]
     }
   },
   {
-    "username": "rbac_user",
+    "username": "hbi_user",
     "firstName": "RBAC",
     "lastName": "User",
-    "email": "rbac_user@redhat.com",
+    "email": "hbi_user@redhat.com",
     "enabled": true,
     "emailVerified": true,
     "totp": false,
@@ -65,7 +65,7 @@
       "newEntitlements": [
         "\"insights\":{\"is_entitled\":true,\"is_trial\":false}"
       ],
-      "org_id": "1234567890",
+      "org_id": "12345",
       "permissions": [
         ""
       ]
