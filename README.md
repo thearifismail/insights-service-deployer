@@ -21,7 +21,7 @@ export EPHEMERAL_SERVER=<> # get server from ephemeral cluster
 ./deploy.sh deploy
 ```
 
-Once deployed, you can verify the deployment by typing `bonfire namespace describe` and you will get the URL to use to access the console (`Gateway route`) and credentials to use (`Default user login`).
+Once deployed, the script will return the URL to use to access the console (`Gateway route`) and credentials to use (`Default user login`).
 
 Note: Since this won't deploy all the services, the frontpage has no content beside the menu, this is expected. 
 
@@ -53,7 +53,14 @@ These are the additional steps to get an end-to-end flow from the HBI
 and rbac consoles such that workspaces and hosts can be created and 
 access managed with rbac and queried with kessel.
 
-(We are in the process of automating the below steps.)
+### Deploy and add test data in one command
+
+```shell
+./deploy.sh deploy_with_hbi_demo
+```
+This deploys the components and adds test user and host data
+
+### Deploy and add data in separate steps
 
 1. Ensure the deploy.sh script has run correctly, above.
 2. Create test hosts in HBI:
@@ -68,11 +75,9 @@ or
 ```shell
 ./deploy.sh add_hosts_to_hbi 12345 10 # adds 10 hosts with org_id 12345
 ```
-3. Login to console:
+3. Create test users:
 ```shell
-bonfire namespace describe
-
-will give a gaterway URL wit jdoe|<password>
+./deploy.sh add_users_to_hbi # adds users defined in data/rbac_users_data.json
 ```
 4. Run some checks. e.g. create a workspace in the HBI and check that it replicates into spicedb.
 
