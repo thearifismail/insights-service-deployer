@@ -191,17 +191,65 @@ build_unleash_importer_image() {
     if [[ -z "${quay_user}" ]]; then
       echo "Current user is not logged into quay with podman -- but don't worry! -- defaulting to pre-built image (quay.io/mmclaugh/kessel-unleash-import:latest) in deployment."
     else
-      IMAGE="quay.io/$quay_user/kessel-unleash-import"
+      REPO_NAME=kessel-unleash-import
+      IMAGE="quay.io/$quay_user/$REPO_NAME"
       TAG="latest"
       IMAGE_TAG="$IMAGE:$TAG"
       podman build --platform linux/amd64 . -f docker/Dockerfile.UnleashImporter -t "$IMAGE_TAG"
       podman push "$IMAGE_TAG"
       podman rmi "$IMAGE_TAG"
       echo "Image built, pushed to $IMAGE_TAG and deleted locally."
-      echo "Note: Your quay.io repo needs to be public for the image to be pulled for ephemeral deployments."
       UNLEASH_IMAGE="$IMAGE"
       UNLEASH_TAG="$TAG"
+
+      check_quay_repo_public "$quay_user" "$REPO_NAME"
     fi
+  fi
+}
+
+check_quay_repo_public() {
+  echo "Checking visibility of your personal Unleash Quay repo, which needs to be public..."
+
+  local REPO_NAMESPACE="$1"
+  local REPO_NAME="$2"
+
+  local API_BASE="https://quay.io/api/v1"
+  local REPO_ENDPOINT="$API_BASE/repository/$REPO_NAMESPACE/$REPO_NAME"
+
+  local response
+  response=$(curl -s -w "\n%{http_code}" "$REPO_ENDPOINT")
+  local body=$(echo "$response" | sed '$d')
+  local http_code=$(echo "$response" | tail -n1)
+
+  if [[ "$http_code" == "401" ]]; then
+    :
+  elif [[ "$http_code" != "200" ]]; then
+    echo "❌ Failed to retrieve repository info for '$REPO_NAMESPACE/$REPO_NAME'. HTTP status: $http_code"
+    echo "$body"
+    echo "This is a bug with the script. Please contact the kessel team!"
+    return 1
+  fi
+
+  local is_public="false"
+  if [[ "$http_code" == "200" ]]; then
+    is_public=$(echo "$body" | jq -r '.is_public' 2>/dev/null)
+  fi
+
+  if [[ "$is_public" == "true" ]]; then
+    echo "✅ Repository is public."
+  else
+    echo "⚠️ $REPO_NAMESPACE/$REPO_NAME repository looks like it's private."
+    echo ""
+    echo "  What happened?"
+    echo "  If it's the first time you've run this script, and it built and pushed a new unleash"
+    echo "  image to manage ephemeral feature flags (based on flags in unleash/unleash_project.json), then you need to manually"
+    echo "  change the visibility of the repo to 'public'. Then just re-run the script and you should be good."
+    echo ""
+    echo "👉 Please make the repository public manually via the Quay.io web console:"
+    echo "  1. Go to https://quay.io/repository/$REPO_NAMESPACE/$REPO_NAME"
+    echo "  2. Click the 'Settings' tab."
+    echo "  3. Change the 'Repository Visibility' to Public."
+    return 1
   fi
 }
 
