@@ -25,6 +25,21 @@ Once deployed, you can verify the deployment by typing `bonfire namespace descri
 
 Note: Since this won't deploy all the services, the frontpage has no content beside the menu, this is expected. 
 
+### Customising the deployment
+
+`./deploy.sh deploy` (and `./deploy.sh deploy_with_hbi_demo`) accept additional arguments: 1) a custom bonfire deploy
+template from a git ref (e.g. branch) in the insights-host-inventory repo, 2) a custom host-inventory image and 3) a
+custom image tag.
+
+Usage:
+```shell
+/deploy.sh deploy [host-inventory-deploy-branch [custom-image [custom-image-tag]]]
+```
+e.g.
+```shell
+./deploy.sh deploy add-kessel-client quay.io/wscalf/host-inventory experiment-and-payload
+```
+
 ### Debugging
 
 If the deploy looks like it's hanging, check with `oc get pods` to ensure that
