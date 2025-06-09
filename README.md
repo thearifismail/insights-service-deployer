@@ -77,7 +77,7 @@ or
 ```
 3. Create test users:
 ```shell
-./deploy.sh add_users_to_hbi # adds users defined in data/rbac_users_data.json
+./deploy.sh add_users # adds users defined in data/rbac_users_data.json to Keycloak and seeds them in RBAC
 ```
 4. Run some checks. e.g. create a workspace in the HBI and check that it replicates into spicedb.
 

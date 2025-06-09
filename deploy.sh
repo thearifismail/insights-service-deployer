@@ -304,9 +304,11 @@ add_hosts_to_hbi() {
   oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"UPDATE hbi.hosts SET org_id='${ORG_ID}';\""
 }
 
-add_users_to_hbi() {
-  echo "Importing users from data/rbac_users_data.json into hbi..."
+add_users() {
+  echo "Importing users from data/rbac_users_data.json into Keycloak..."
   scripts/rbac_load_users.sh
+  echo "Seeding users to RBAC.."
+  scripts/rbac_seed_users.sh
 }
 
 wait_for_sink_connector_ready() {
@@ -321,7 +323,7 @@ show_bonfire_namespace() {
 }
 
 usage() {
-  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|deploy_with_hbi_demo|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi|add_users_to_hbi}"
+  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|deploy_with_hbi_demo|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi|add_users}"
   exit 1
 }
 
@@ -343,7 +345,7 @@ case "$1" in
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4"
     add_hosts_to_hbi
-    add_users_to_hbi
+    add_users
     wait_for_sink_connector_ready
     show_bonfire_namespace
     ;;
@@ -357,8 +359,8 @@ case "$1" in
     # $2 is ORG_ID, $3 is the number of hosts to add
     add_hosts_to_hbi "$2" "$3"
     ;;
-  add_users_to_hbi)
-    add_users_to_hbi
+  add_users)
+    add_users
     ;;
   deploy_unleash_importer_image)
     deploy_unleash_importer_image
