@@ -382,6 +382,9 @@ case "$1" in
   deploy_unleash_importer_image)
     deploy_unleash_importer_image
     ;;
+  iqe)
+    iqe
+    ;; 
   *)
     usage
     ;;
