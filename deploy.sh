@@ -4,7 +4,7 @@ set -e
 
 login() {
   user="$(oc whoami < /dev/null)"
-  [[ $? -eq 0 ]] && echo "Skipping login. Already logged in as user: $user" && exit 0
+  [[ $? -eq 0 ]] && echo "Skipping login. Already logged in as user: $user" && return 0
 
   if [[ -z "${EPHEMERAL_TOKEN}" || -z "${EPHEMERAL_SERVER}" ]]; then
     [[ -z "${EPHEMERAL_TOKEN}" ]] && echo " - EPHEMERAL_TOKEN is not set"
