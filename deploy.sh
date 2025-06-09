@@ -54,7 +54,6 @@ deploy() {
   bonfire deploy host-inventory -F true -p host-inventory/RBAC_V2_FORCE_ORG_ADMIN=true \
   -p host-inventory/URLLIB3_LOG_LEVEL=WARN \
   --ref-env insights-stage \
-  -p host-inventory/CONSUMER_MQ_BROKER=rbac-kafka-kafka-bootstrap:9092  \
   --set-template-ref host-inventory="$HBI_DEPLOYMENT_TEMPLATE_REF"  \
   -p rbac/V2_APIS_ENABLED=True -p rbac/V2_READ_ONLY_API_MODE=False -p rbac/V2_BOOTSTRAP_TENANT=True \
   -p rbac/REPLICATION_TO_RELATION_ENABLED=True -p rbac/BYPASS_BOP_VERIFICATION=True \
@@ -89,35 +88,40 @@ idmsvc" \
 setup_debezium() {
   echo "Debezium is setting up.."
   download_debezium_configuration
-  cd scripts
-  chmod 0700 kafka.sh
-  ./kafka.sh -n `oc project -q`
-  cd ..
 
-  RBAC_KAFKA_POD=rbac-kafka-kafka-0
-  until oc get pod $RBAC_KAFKA_POD  > /dev/null 2>&1; do
-    echo "Waiting for pod ${RBAC_KAFKA_POD} to be created..."
-    sleep 5
-  done
+  NAMESPACE=env-$(oc project -q)
+  oc process -f ./deploy/debezium-connector.yml -p KAFKA_CONNECT_INSTANCE="$NAMESPACE" --param-file=./scripts/connector-params.env | oc apply -f -
 
-  oc wait pod $RBAC_KAFKA_POD --for=condition=Ready --timeout=60s
-
-  oc rsh $RBAC_KAFKA_POD /opt/kafka/bin/kafka-topics.sh \
-  --bootstrap-server=rbac-kafka-kafka-bootstrap:9092 \
+  # TODO: remove the following lines with topics set directly in the rbac ClowdApp template, as in
+  # https://github.com/tonytheleg/inventory-api/blob/8db7dbbaca054193c19d2cc109fe152a24e51e29/deploy/kessel-inventory-ephem.yaml#L82
+  KAFKA_POD=$(oc get pod/"$NAMESPACE"-kafka-0 --no-headers -o custom-columns=":metadata.name")
+  oc wait pod "$KAFKA_POD" --for=condition=Ready --timeout=60s
+  KAFKA_BOOTSTRAP=$(oc get svc/"$NAMESPACE"-kafka-bootstrap --no-headers -o custom-columns=":metadata.name")
+  oc rsh $KAFKA_POD /opt/kafka/bin/kafka-topics.sh \
+  --bootstrap-server="$KAFKA_BOOTSTRAP":9092 \
   --create --if-not-exists --topic outbox.event.workspace --partitions 3 --replication-factor 1
 
   # Force re-seed of permissions, roles and groups when we are sure the replication slot has been created in rbac db
-  force_seed_rbac_acl_data_in_relations
+  force_seed_rbac_data_in_relations
 }
 
 # workaround for the case where seeding attempted before replication slot has been created for debezium and events are lost
-force_seed_rbac_acl_data_in_relations() {
-  echo "Force (re-)seeding of rbac acl data in kessel..."
+force_seed_rbac_data_in_relations() {
+  echo "Force (re-)seeding of rbac data in kessel..."
   echo "Wait for rbac debezium connector to be ready to ensure replication slot has been created..."
   oc wait kafkaconnector/rbac-connector --for=condition=Ready --timeout=300s
   echo "Run seeding script..."
   RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
-  oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships" | grep -F 'INFO: ***'
+  while true; do
+    OUTPUT=$(oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships" 2>&1 | grep -F 'INFO: ***' || true)
+    if [ -z "$OUTPUT" ]; then
+      echo "Rbac service pod was OOMKilled or otherwise unavailable when attempting to run the seed script. Retrying in 5s..."
+      sleep 5
+    else
+      break
+    fi
+  done
+  echo "$OUTPUT"
 
   setup_kessel
 }
@@ -142,9 +146,11 @@ apply_latest_schema() {
 setup_sink_connector() {
   echo "Relations sink connector is setting up.."
   NAMESPACE=`oc project -q`
-  BOOTSTRAP_SERVERS=$(oc get svc -n $NAMESPACE -o json | jq -r '.items[] | select(.metadata.name | test("^rbac-kafka.*-kafka-bootstrap")) | "\(.metadata.name).\(.metadata.namespace).svc"')
+  BOOTSTRAP_SERVERS=$(oc get svc/env-"$NAMESPACE"-kafka-bootstrap -o json | jq -r '"\(.metadata.name).\(.metadata.namespace).svc"')
   RELATIONS_SINK_IMAGE=quay.io/cloudservices/kafka-relations-sink
   IMAGE_TAG=latest
+  # https://github.com/project-kessel/kafka-relations-sink/pull/20 is coming, which removes most of these parameters
+  # and drops custom KafkaConnect and KafkaConnector
   bonfire deploy kessel -C relations-sink-ephemeral \
    -p relations-sink-ephemeral/NAMESPACE=$NAMESPACE \
    -p relations-sink-ephemeral/RELATIONS_SINK_IMAGE=$RELATIONS_SINK_IMAGE \
@@ -155,10 +161,7 @@ setup_sink_connector() {
 download_debezium_configuration() {
   RAW_BASE_URL="https://raw.githubusercontent.com/RedHatInsights/insights-rbac/master"
   FILES=(
-    "deploy/kafka-connect.yml"
     "deploy/debezium-connector.yml"
-    "scripts/kafka.sh"
-    "scripts/connector-params.env"
   )
 
   RAW_BASE_URL="https://raw.githubusercontent.com/RedHatInsights/insights-rbac/master"
@@ -371,6 +374,9 @@ case "$1" in
     ;;
   deploy_unleash_importer_image)
     deploy_unleash_importer_image
+    ;;
+  force_seed_rbac_data_in_relations)
+    force_seed_rbac_data_in_relations
     ;;
   *)
     usage
