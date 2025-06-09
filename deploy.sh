@@ -132,11 +132,11 @@ setup_kessel() {
 
 apply_latest_schema() {
   echo "Applying latest SpiceDB schema from rbac-config"
-  curl -o schema.zed https://raw.githubusercontent.com/RedHatInsights/rbac-config/refs/heads/master/configs/stage/schemas/schema.zed
+  curl -o deploy/schema.zed https://raw.githubusercontent.com/RedHatInsights/rbac-config/refs/heads/master/configs/stage/schemas/schema.zed
   oc create configmap spicedb-schema --from-file=schema.zed -o yaml --dry-run=client | oc apply -f -
   # Ensure the pods are using the new schema
   oc rollout restart deployment/kessel-relations-api
-  rm schema.zed
+  rm deploy/schema.zed
 }
 
 setup_sink_connector() {
