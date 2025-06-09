@@ -331,6 +331,10 @@ wait_for_sink_connector_ready() {
   oc wait kafkaconnector/relations-sink-connector --for=condition=Ready --timeout=300s
 }
 
+iqe() {
+    bonfire deploy-iqe-cji kessel-inventory --namespace `oc project -q` --debug-pod
+}
+
 show_bonfire_namespace() {
   bonfire namespace describe
 }
