@@ -145,13 +145,7 @@ apply_latest_schema() {
 
 setup_sink_connector() {
   echo "Relations sink connector is setting up.."
-  NAMESPACE=`oc project -q`
-  BOOTSTRAP_SERVERS=$(oc get svc/env-"$NAMESPACE"-kafka-bootstrap -o json | jq -r '"\(.metadata.name).\(.metadata.namespace).svc"')
-
-  bonfire deploy kessel -C relations-sink-ephemeral \
-   -p relations-sink-ephemeral/ENV_NAME=env-"$NAMESPACE" \
-   -p relations-sink-ephemeral/NAMESPACE=$NAMESPACE \
-   -p relations-sink-ephemeral/BOOTSTRAP_SERVERS=$BOOTSTRAP_SERVERS
+  bonfire deploy kessel -C relations-sink-ephemeral
 }
 
 download_debezium_configuration() {
