@@ -94,9 +94,9 @@ setup_debezium() {
 
   # TODO: remove the following lines with topics set directly in the rbac ClowdApp template, as in
   # https://github.com/tonytheleg/inventory-api/blob/8db7dbbaca054193c19d2cc109fe152a24e51e29/deploy/kessel-inventory-ephem.yaml#L82
-  KAFKA_POD=$(oc get pod/"$NAMESPACE"-kafka-0 --no-headers -o custom-columns=":metadata.name")
+  KAFKA_POD="$NAMESPACE"-kafka-0
   oc wait pod "$KAFKA_POD" --for=condition=Ready --timeout=60s
-  KAFKA_BOOTSTRAP=$(oc get svc/"$NAMESPACE"-kafka-bootstrap --no-headers -o custom-columns=":metadata.name")
+  KAFKA_BOOTSTRAP="$NAMESPACE"-kafka-bootstrap
   oc rsh $KAFKA_POD /opt/kafka/bin/kafka-topics.sh \
   --bootstrap-server="$KAFKA_BOOTSTRAP":9092 \
   --create --if-not-exists --topic outbox.event.workspace --partitions 3 --replication-factor 1
@@ -309,9 +309,11 @@ add_hosts_to_hbi() {
 
   until [ "$AFTER_COUNT" == "$TARGET_COUNT" ]; do
     echo "Waiting for ${NUM_HOSTS} hosts added via kafka to sync to the hbi db... [AFTER_COUNT: ${AFTER_COUNT}, TARGET_COUNT: ${TARGET_COUNT}]"
-    sleep 5
+    sleep 1
     AFTER_COUNT=$(oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"select count(*) from hbi.hosts;\"" | head -3 | tail -1 | tr -d '[:space:]')
   done
+  AFTER_COUNT=$(oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"select count(*) from hbi.hosts;\"" | head -3 | tail -1 | tr -d '[:space:]')
+  echo "Done. [AFTER_COUNT: ${AFTER_COUNT}, TARGET_COUNT: ${TARGET_COUNT}]"
 }
 
 add_users() {
@@ -354,8 +356,8 @@ case "$1" in
     check_bonfire_namespace
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4"
-    add_hosts_to_hbi
     add_users
+    add_hosts_to_hbi
     wait_for_sink_connector_ready
     show_bonfire_namespace
     ;;
