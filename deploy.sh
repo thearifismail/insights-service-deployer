@@ -147,15 +147,11 @@ setup_sink_connector() {
   echo "Relations sink connector is setting up.."
   NAMESPACE=`oc project -q`
   BOOTSTRAP_SERVERS=$(oc get svc/env-"$NAMESPACE"-kafka-bootstrap -o json | jq -r '"\(.metadata.name).\(.metadata.namespace).svc"')
-  RELATIONS_SINK_IMAGE=quay.io/cloudservices/kafka-relations-sink
-  IMAGE_TAG=latest
-  # https://github.com/project-kessel/kafka-relations-sink/pull/20 is coming, which removes most of these parameters
-  # and drops custom KafkaConnect and KafkaConnector
+
   bonfire deploy kessel -C relations-sink-ephemeral \
+   -p relations-sink-ephemeral/ENV_NAME=ephemeral \
    -p relations-sink-ephemeral/NAMESPACE=$NAMESPACE \
-   -p relations-sink-ephemeral/RELATIONS_SINK_IMAGE=$RELATIONS_SINK_IMAGE \
-   -p relations-sink-ephemeral/BOOTSTRAP_SERVERS=$BOOTSTRAP_SERVERS \
-   -p relations-sink-ephemeral/IMAGE_TAG=$IMAGE_TAG
+   -p relations-sink-ephemeral/BOOTSTRAP_SERVERS=$BOOTSTRAP_SERVERS
 }
 
 download_debezium_configuration() {
@@ -376,9 +372,6 @@ case "$1" in
     ;;
   deploy_unleash_importer_image)
     deploy_unleash_importer_image
-    ;;
-  force_seed_rbac_data_in_relations)
-    force_seed_rbac_data_in_relations
     ;;
   *)
     usage
