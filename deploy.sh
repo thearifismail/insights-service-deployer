@@ -352,9 +352,9 @@ case "$1" in
     check_bonfire_namespace
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4"
+    wait_for_sink_connector_ready
     add_users
     add_hosts_to_hbi
-    wait_for_sink_connector_ready
     show_bonfire_namespace
     ;;
   clean_download_debezium_configuration)
