@@ -47,9 +47,19 @@ done
 
 echo "Processing batch request for: "$batch
 
-# Send the Batch request to RBAC service pod to get the users into RBAC and replicate them to relations
-oc exec -it $RBAC_SERVICE_POD --container=rbac-service -- /bin/bash -c "./rbac/manage.py shell << EOF
+while true; do
+  # Send the Batch request to RBAC service pod to get the users into RBAC and replicate them to relations
+  oc exec -it $RBAC_SERVICE_POD --container=rbac-service -- /bin/bash -c "./rbac/manage.py shell << EOF
 from management.management.commands.utils import process_batch
 process_batch($batch)
 exit()
 EOF"
+  EXIT_STATUS=$?
+  if [ $EXIT_STATUS -ne 0 ]; then
+      echo "Rbac service pod was OOMKilled or was otherwise unavailable when attempting to run the user seed script. Trying again..."
+      oc rollout status deployment/rbac-service -w
+      RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+    else
+      break
+    fi
+done

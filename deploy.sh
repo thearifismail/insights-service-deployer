@@ -55,6 +55,8 @@ deploy() {
   -p host-inventory/URLLIB3_LOG_LEVEL=WARN \
   --ref-env insights-stage \
   --set-template-ref host-inventory="$HBI_DEPLOYMENT_TEMPLATE_REF"  \
+  -p rbac/MEMORY_LIMIT=512Mi \
+  -p rbac/MEMORY_REQUEST=256Mi \
   -p rbac/V2_APIS_ENABLED=True -p rbac/V2_READ_ONLY_API_MODE=False -p rbac/V2_BOOTSTRAP_TENANT=True \
   -p rbac/REPLICATION_TO_RELATION_ENABLED=True -p rbac/BYPASS_BOP_VERIFICATION=True \
   -p rbac/KAFKA_ENABLED=False -p rbac/NOTIFICATONS_ENABLED=False \
@@ -110,6 +112,8 @@ force_seed_rbac_data_in_relations() {
   echo "Force re-seeding of rbac permissions, roles and groups in kessel..."
   echo "Wait for rbac debezium connector to be ready to ensure replication slot has been created..."
   oc wait kafkaconnector/rbac-connector --for=condition=Ready --timeout=300s
+  echo "Wait for rbac service deployment..."
+  oc rollout status deployment/rbac-service -w
   RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
   while true; do
     OUTPUT=$(oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships"  | grep -E 'INFO: \*\*\*|ERROR:')
