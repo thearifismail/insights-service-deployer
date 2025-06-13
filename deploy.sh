@@ -107,16 +107,17 @@ setup_debezium() {
 
 # workaround for the case where seeding attempted before replication slot has been created for debezium and events are lost
 force_seed_rbac_data_in_relations() {
-  echo "Force (re-)seeding of rbac data in kessel..."
+  echo "Force re-seeding of rbac permissions, roles and groups in kessel..."
   echo "Wait for rbac debezium connector to be ready to ensure replication slot has been created..."
   oc wait kafkaconnector/rbac-connector --for=condition=Ready --timeout=300s
-  echo "Run seeding script..."
   RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
   while true; do
-    OUTPUT=$(oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships" 2>&1 | grep -F 'INFO: ***' || true)
-    if [ -z "$OUTPUT" ]; then
-      echo "Rbac service pod was OOMKilled or otherwise unavailable when attempting to run the seed script. Retrying in 5s..."
-      sleep 5
+    OUTPUT=$(oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships"  | grep -E 'INFO: \*\*\*|ERROR:')
+    EXIT_STATUS=$?
+    if [ $EXIT_STATUS -ne 0 ]; then
+      echo "Rbac service pod was OOMKilled or was otherwise unavailable when attempting to run the seed script. Trying again..."
+      oc rollout status deployment/rbac-service -w
+      RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
     else
       break
     fi
