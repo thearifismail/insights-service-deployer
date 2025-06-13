@@ -76,6 +76,7 @@ staleness,\
 config-manager,\
 idmsvc" \
   ${HBI_CUSTOM_IMAGE_PARAMETER} -p rbac/V2_MIGRATION_APP_EXCLUDE_LIST="approval" \
+  -p rbac/V2_MIGRATION_RESOURCE_EXCLUDE_LIST="empty-exclude-list" \
   -p host-inventory/KESSEL_TARGET_URL=kessel-inventory-api.$NAMESPACE.svc.cluster.local:9000 \
   --set-image-tag "${HBI_CUSTOM_IMAGE}=${HBI_CUSTOM_IMAGE_TAG}" \
   --set-image-tag quay.io/cloudservices/insights-inventory-frontend="${HOST_FRONTEND_GIT_COMMIT}" \
