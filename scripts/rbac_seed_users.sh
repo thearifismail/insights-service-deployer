@@ -63,3 +63,25 @@ EOF"
       break
     fi
 done
+
+## Adding users to management_principal table in RBAC
+# Tenants are bootstrapped from the process_batch() above
+# Get the tenant ID and parse the users list (json) and insert into the DB, This will avoid the need for logging in Via console
+RBAC_DB_POD=$(oc get pods -l app=rbac,service=db,sub=local_db --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+
+# Add the default user "jdoe" to RBAC managment_ principal table
+UUID=$(uuidgen | tr "[:upper:]" "[:lower:]")
+RBAC_TENANT_ID=$(oc exec "$RBAC_DB_POD" -- psql -d rbac -t -c "select id from api_tenant where org_id='12345';" | head -1 | tr -d '[:space:]')
+RESULT=$(oc exec "$RBAC_DB_POD" -- psql -d rbac -t -c "Insert INTO management_principal (uuid, username,tenant_id,type,user_id) VALUES ('$UUID','jdoe','$RBAC_TENANT_ID','user','12345');")
+
+# Add users from the JSON file to RBAC Principals table 
+for (( i=0; i<${num_users}; i++ ));
+do
+#    This can be avoided if we can verify
+  UUID=$(uuidgen | tr "[:upper:]" "[:lower:]")
+  ORG_ID=${ORG_ID_LIST[$i]}
+  echo "Adding user :"${USER_NAME_LIST[i]} "from Org:" $ORG_ID "to RBAC"
+  RBAC_TENANT_ID=$(oc exec "$RBAC_DB_POD" -- psql -d rbac -t -c "select id from api_tenant where org_id='$ORG_ID';" | head -1 | tr -d '[:space:]')
+  RESULT=$(oc exec "$RBAC_DB_POD" -- psql -d rbac -t -c "Insert INTO management_principal (uuid, username,tenant_id,type,user_id) VALUES ('$UUID','${USER_NAME_LIST[i]}','$RBAC_TENANT_ID','user','${USER_ID_LIST[i]}');")
+  echo $RESULT
+done
