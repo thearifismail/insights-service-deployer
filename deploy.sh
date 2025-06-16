@@ -115,14 +115,14 @@ force_seed_rbac_data_in_relations() {
   oc wait kafkaconnector/rbac-connector --for=condition=Ready --timeout=300s
   echo "Wait for rbac service deployment..."
   oc rollout status deployment/rbac-service -w
-  RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+  RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service -o json | jq -r '.items[] | select(.status.phase == "Running" and .metadata.deletionTimestamp == null) | .metadata.name' | head -n 1)
   while true; do
     OUTPUT=$(oc exec -it "$RBAC_SERVICE_POD" --container=rbac-service -- /bin/bash -c "./rbac/manage.py seeds --force-create-relationships"  | grep -E 'INFO: \*\*\*|ERROR:')
     EXIT_STATUS=$?
     if [ $EXIT_STATUS -ne 0 ]; then
       echo "Rbac service pod was OOMKilled or was otherwise unavailable when attempting to run the seed script. Trying again..."
       oc rollout status deployment/rbac-service -w
-      RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+      RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service -o json | jq -r '.items[] | select(.status.phase == "Running" and .metadata.deletionTimestamp == null) | .metadata.name' | head -n 1)
     else
       break
     fi

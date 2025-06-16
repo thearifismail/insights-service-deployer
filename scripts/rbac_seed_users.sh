@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 NAMESPACE=`oc project -q 2>/dev/null || true`
-RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service -o json | jq -r '.items[] | select(.status.phase == "Running" and .metadata.deletionTimestamp == null) | .metadata.name' | head -n 1)
 
 USER_FILE="./data/rbac_users_data.json" 
 # --- Check if the JSON file exists ---
@@ -58,7 +58,7 @@ EOF"
   if [ $EXIT_STATUS -ne 0 ]; then
       echo "Rbac service pod was OOMKilled or was otherwise unavailable when attempting to run the user seed script. Trying again..."
       oc rollout status deployment/rbac-service -w
-      RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
+      RBAC_SERVICE_POD=$(oc get pods -l pod=rbac-service -o json | jq -r '.items[] | select(.status.phase == "Running" and .metadata.deletionTimestamp == null) | .metadata.name' | head -n 1)
     else
       break
     fi
