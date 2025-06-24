@@ -142,11 +142,11 @@ okteto_up() {
     log "Using image: $image_name:$image_tag"
     
     # Replace environment variable placeholders with actual values
-    sed -i.bak "s/\${OKTETO_USER_ID}/$uid_start/g; s/\${OKTETO_GROUP_ID}/$uid_start/g; s/\${OKTETO_FS_GROUP_ID}/$uid_start/g; s|\${OKTETO_IMAGE}|$image_name|g; s/\${OKTETO_TAG}/$image_tag/g" okteto.yaml
+    sed -i.bak "s/\${OKTETO_USER_ID}/$uid_start/g; s/\${OKTETO_GROUP_ID}/$uid_start/g; s/\${OKTETO_FS_GROUP_ID}/$uid_start/g; s|\${OKTETO_IMAGE}|$image_name|g; s/\${OKTETO_TAG}/$image_tag/g" okteto/okteto.yaml
     
     # Set the repo path for okteto
     export INSIGHTS_REPO_PATH
-    okteto up --namespace "$(oc project -q)" "$@"
+    okteto up --file okteto/okteto.yaml --namespace "$(oc project -q)" "$@"
 }
 
 okteto_down() {
@@ -164,7 +164,7 @@ okteto_down() {
     fi
     
     log "Stopping development containers: $active"
-    okteto down --namespace "$(oc project -q)" --all
+    okteto down --file okteto/okteto.yaml --namespace "$(oc project -q)" --all
     
     # Automated cleanup fallback for okteto bug
     log "Running automated cleanup of any remaining okteto deployments..."
@@ -193,7 +193,7 @@ okteto_exec() {
         exit 1
     fi
     
-    okteto exec --namespace "$(oc project -q)" "$service" "$@"
+    okteto exec --file okteto/okteto.yaml --namespace "$(oc project -q)" "$service" "$@"
 }
 
 show_help() {
@@ -242,8 +242,8 @@ main() {
         exit 1
     fi
     
-    if [[ ! -f "okteto.yaml" ]]; then
-        error "okteto.yaml not found in current directory"
+    if [[ ! -f "okteto/okteto.yaml" ]]; then
+        error "okteto.yaml not found in okteto/ directory"
         exit 1
     fi
     
