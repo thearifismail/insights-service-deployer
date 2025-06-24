@@ -77,7 +77,7 @@ show_status() {
     if [[ "$clowdapp_disabled" == "true" ]]; then
         log "ClowdApp: 🔒 disabled (development mode)"
     else
-        log "ClowdApp: 🔄 enabled (production mode)"
+        log "ClowdApp: 🔄 enabled (deployed mode)"
     fi
     
     local active_count=0 total_count=0
@@ -91,13 +91,13 @@ show_status() {
             echo "  🚀 $service (development)" >&2
             active_count=$((active_count + 1))
         else
-            echo "  📦 $service (production)" >&2
+            echo "  📦 $service (deployed)" >&2
         fi
     done
     
     echo "" >&2
     if [[ $active_count -eq 0 ]]; then
-        echo "  All services in production mode" >&2
+        echo "  All services in deployed mode" >&2
     elif [[ $active_count -eq $total_count ]]; then
         echo "  All services in development mode" >&2
     else
