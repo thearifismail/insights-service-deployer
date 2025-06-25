@@ -5,8 +5,67 @@
 
 set -e
 
+# Default expected counts
+EXPECTED_HOSTS=10
+EXPECTED_GROUPS=5
+EXPECTED_WORKSPACES=5
+
+# Parse command line arguments
+usage() {
+    echo "Usage: $0 [OPTIONS]"
+    echo "Options:"
+    echo "  -h, --hosts NUM       Expected number of hosts (default: $EXPECTED_HOSTS)"
+    echo "  -g, --groups NUM      Expected number of groups (default: $EXPECTED_GROUPS)"
+    echo "  -w, --workspaces NUM  Expected number of workspaces (default: $EXPECTED_WORKSPACES)"
+    echo "  --help               Show this help message"
+    echo ""
+    echo "Example: $0 --hosts 50 --groups 10 --workspaces 3"
+}
+
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--hosts)
+            EXPECTED_HOSTS="$2"
+            if ! [[ "$EXPECTED_HOSTS" =~ ^[0-9]+$ ]]; then
+                echo "❌ ERROR: Expected hosts must be a positive number"
+                exit 1
+            fi
+            shift 2
+            ;;
+        -g|--groups)
+            EXPECTED_GROUPS="$2"
+            if ! [[ "$EXPECTED_GROUPS" =~ ^[0-9]+$ ]]; then
+                echo "❌ ERROR: Expected groups must be a positive number"
+                exit 1
+            fi
+            shift 2
+            ;;
+        -w|--workspaces)
+            EXPECTED_WORKSPACES="$2"
+            if ! [[ "$EXPECTED_WORKSPACES" =~ ^[0-9]+$ ]]; then
+                echo "❌ ERROR: Expected workspaces must be a positive number"
+                exit 1
+            fi
+            shift 2
+            ;;
+        --help)
+            usage
+            exit 0
+            ;;
+        *)
+            echo "❌ ERROR: Unknown option $1"
+            usage
+            exit 1
+            ;;
+    esac
+done
+
 echo "Starting HBI Smoke Test"
 echo "======================"
+echo "Expected counts:"
+echo "  • Hosts: $EXPECTED_HOSTS"
+echo "  • Groups: $EXPECTED_GROUPS"
+echo "  • Workspaces: $EXPECTED_WORKSPACES"
 echo ""
 
 echo "Setting up SpiceDB connection..."
@@ -163,13 +222,13 @@ DATA_TESTS_PASSED=0
 ISSUES=0
 
 # Host validation
-if [[ $HOST_COUNT -eq 10 ]]; then
-    echo "✅ Exactly 10 demo hosts found (HBI → SpiceDB working)"
+if [[ $HOST_COUNT -eq $EXPECTED_HOSTS ]]; then
+    echo "✅ Exactly $EXPECTED_HOSTS demo hosts found (HBI → SpiceDB working)"
     DATA_TESTS_PASSED=$((DATA_TESTS_PASSED + 1))
-elif [[ $HOST_COUNT -gt 10 ]]; then
-    echo "⚠️  More than 10 hosts found ($HOST_COUNT) - may have leftover data"
+elif [[ $HOST_COUNT -gt $EXPECTED_HOSTS ]]; then
+    echo "⚠️  More than $EXPECTED_HOSTS hosts found ($HOST_COUNT) - may have leftover data"
 elif [[ $HOST_COUNT -gt 0 ]]; then
-    echo "⚠️  Only $HOST_COUNT hosts found (expected 10)"
+    echo "⚠️  Only $HOST_COUNT hosts found (expected $EXPECTED_HOSTS)"
     ISSUES=$((ISSUES + 1))
 else
     echo "❌ No hosts found in SpiceDB"
@@ -177,20 +236,30 @@ else
 fi
 
 # RBAC groups validation
-if [[ $GROUP_COUNT -gt 0 ]]; then
-    echo "✅ RBAC groups present ($GROUP_COUNT) - RBAC → Kessel replication working"
+if [[ $GROUP_COUNT -eq $EXPECTED_GROUPS ]]; then
+    echo "✅ Exactly $EXPECTED_GROUPS RBAC groups found (RBAC → Kessel replication working)"
     DATA_TESTS_PASSED=$((DATA_TESTS_PASSED + 1))
+elif [[ $GROUP_COUNT -gt $EXPECTED_GROUPS ]]; then
+    echo "⚠️  More than $EXPECTED_GROUPS groups found ($GROUP_COUNT) - may have leftover data"
+elif [[ $GROUP_COUNT -gt 0 ]]; then
+    echo "⚠️  Only $GROUP_COUNT groups found (expected $EXPECTED_GROUPS)"
+    ISSUES=$((ISSUES + 1))
 else
-    echo "⚠️  No RBAC groups found - may indicate replication issue"
+    echo "❌ No RBAC groups found - RBAC → Kessel replication issue"
     ISSUES=$((ISSUES + 1))
 fi
 
 # RBAC workspaces validation
-if [[ $WORKSPACE_COUNT -gt 0 ]]; then
-    echo "✅ RBAC workspaces present ($WORKSPACE_COUNT) - RBAC → Kessel replication working"
+if [[ $WORKSPACE_COUNT -eq $EXPECTED_WORKSPACES ]]; then
+    echo "✅ Exactly $EXPECTED_WORKSPACES RBAC workspaces found (RBAC → Kessel replication working)"
     DATA_TESTS_PASSED=$((DATA_TESTS_PASSED + 1))
+elif [[ $WORKSPACE_COUNT -gt $EXPECTED_WORKSPACES ]]; then
+    echo "⚠️  More than $EXPECTED_WORKSPACES workspaces found ($WORKSPACE_COUNT) - may have leftover data"
+elif [[ $WORKSPACE_COUNT -gt 0 ]]; then
+    echo "⚠️  Only $WORKSPACE_COUNT workspaces found (expected $EXPECTED_WORKSPACES)"
+    ISSUES=$((ISSUES + 1))
 else
-    echo "⚠️  No RBAC workspaces found - may indicate replication issue"
+    echo "❌ No RBAC workspaces found - RBAC → Kessel replication issue"
     ISSUES=$((ISSUES + 1))
 fi
 
