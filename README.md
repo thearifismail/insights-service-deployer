@@ -122,7 +122,7 @@ After deployment, you can develop services locally using Okteto for fast code-re
 ### Usage
 ```bash
 # Set your local repo path (required)
-export INSIGHTS_REPO_PATH=/path/to/insights-host-inventory
+export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/insights-host-inventory
 
 # Start development mode for specific services
 ./okteto-dev.sh up host-inventory-service host-inventory-export-service

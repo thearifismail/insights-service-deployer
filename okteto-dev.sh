@@ -4,7 +4,7 @@
 set -e
 
 # Configuration - can be overridden by environment variables
-INSIGHTS_REPO_PATH="${INSIGHTS_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}"
+INSIGHTS_HOST_INVENTORY_REPO_PATH="${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}"
 CLOWDAPP_NAME="${CLOWDAPP_NAME:-host-inventory}"
 
 # Default services (hardcoded based on deployment discovery)
@@ -70,7 +70,7 @@ check_dev_status() {
 show_status() {
     local services=("${@:-${DEFAULT_SERVICES[@]}}")
     log "Current development status:"
-    log "Repo path: $INSIGHTS_REPO_PATH"
+    log "Repo path: $INSIGHTS_HOST_INVENTORY_REPO_PATH"
     
     # Show ClowdApp status
     local clowdapp_disabled=$(check_clowdapp_status)
@@ -141,11 +141,16 @@ okteto_up() {
     
     log "Using image: $image_name:$image_tag"
     
+    # Generate okteto.yaml from template with current namespace values
+    log "Generating okteto.yaml from template for namespace $namespace (UID: $uid_start)"
+    cp okteto/okteto.template.yaml okteto/okteto.yaml
+    
     # Replace environment variable placeholders with actual values
-    sed -i.bak "s/\${OKTETO_USER_ID}/$uid_start/g; s/\${OKTETO_GROUP_ID}/$uid_start/g; s/\${OKTETO_FS_GROUP_ID}/$uid_start/g; s|\${OKTETO_IMAGE}|$image_name|g; s/\${OKTETO_TAG}/$image_tag/g" okteto/okteto.yaml
+    sed -i.tmp "s/\${OKTETO_USER_ID}/$uid_start/g; s/\${OKTETO_GROUP_ID}/$uid_start/g; s/\${OKTETO_FS_GROUP_ID}/$uid_start/g; s|\${OKTETO_IMAGE}|$image_name|g; s/\${OKTETO_TAG}/$image_tag/g" okteto/okteto.yaml
+    rm -f okteto/okteto.yaml.tmp
     
     # Set the repo path for okteto
-    export INSIGHTS_REPO_PATH
+    export INSIGHTS_HOST_INVENTORY_REPO_PATH
     okteto up --file okteto/okteto.yaml --namespace "$(oc project -q)" "$@"
 }
 
@@ -163,6 +168,17 @@ okteto_down() {
         return 0
     fi
     
+    # Use existing okteto.yaml if available, otherwise create temporary one
+    local created_temp_yaml=false
+    if [[ ! -f "okteto/okteto.yaml" ]]; then
+        log "Creating temporary okteto.yaml for cleanup"
+        cp okteto/okteto.template.yaml okteto/okteto.yaml
+        # Use dummy values - actual values don't matter for cleanup operations
+        sed -i.tmp "s/\${OKTETO_USER_ID}/1000000000/g; s/\${OKTETO_GROUP_ID}/1000000000/g; s/\${OKTETO_FS_GROUP_ID}/1000000000/g; s|\${OKTETO_IMAGE}|quay.io/cloudservices/insights-inventory|g; s/\${OKTETO_TAG}/latest/g" okteto/okteto.yaml
+        rm -f okteto/okteto.yaml.tmp
+        created_temp_yaml=true
+    fi
+    
     log "Stopping development containers: $active"
     okteto down --file okteto/okteto.yaml --namespace "$(oc project -q)" --all
     
@@ -173,6 +189,12 @@ okteto_down() {
     oc get pvc -o name | grep -- '-okteto$' | xargs -r oc delete >/dev/null 2>&1 || true
     
     log "All development containers cleaned up"
+    
+    # Clean up temporary okteto.yaml if we created it
+    if [[ "$created_temp_yaml" == "true" ]]; then
+        log "Cleaning up temporary okteto.yaml"
+        rm -f okteto/okteto.yaml
+    fi
     
     # Re-enable ClowdApp reconciliation after stopping development
     local clowdapp_disabled=$(check_clowdapp_status)
@@ -193,7 +215,22 @@ okteto_exec() {
         exit 1
     fi
     
-    okteto exec --file okteto/okteto.yaml --namespace "$(oc project -q)" "$service" "$@"
+    # Use existing okteto.yaml if available, otherwise create temporary one
+    local created_temp_yaml=false
+    if [[ ! -f "okteto/okteto.yaml" ]]; then
+        cp okteto/okteto.template.yaml okteto/okteto.yaml
+        # Use dummy values - actual values don't matter for exec operations
+        sed -i.tmp "s/\${OKTETO_USER_ID}/1000000000/g; s/\${OKTETO_GROUP_ID}/1000000000/g; s/\${OKTETO_FS_GROUP_ID}/1000000000/g; s|\${OKTETO_IMAGE}|quay.io/cloudservices/insights-inventory|g; s/\${OKTETO_TAG}/latest/g" okteto/okteto.yaml
+        rm -f okteto/okteto.yaml.tmp
+        created_temp_yaml=true
+    fi
+    
+    okteto exec --file okteto/okteto.yaml --namespace "$(oc project -q)" "$service" -- "$@"
+    
+    # Clean up temporary okteto.yaml if we created it
+    if [[ "$created_temp_yaml" == "true" ]]; then
+        rm -f okteto/okteto.yaml
+    fi
 }
 
 show_help() {
@@ -201,8 +238,8 @@ show_help() {
 Usage: okteto-dev.sh {up|down|check|exec} [services...]
 
 Configuration:
-  Set INSIGHTS_REPO_PATH environment variable to your local repo path
-  Current: $INSIGHTS_REPO_PATH
+  Set INSIGHTS_HOST_INVENTORY_REPO_PATH environment variable to your local repo path
+  Current: $INSIGHTS_HOST_INVENTORY_REPO_PATH
   
   Set CLOWDAPP_NAME environment variable to override ClowdApp name
   Current: $CLOWDAPP_NAME
@@ -216,7 +253,7 @@ Commands:
   exec <service> [cmd] - Execute command in development container
 
 Examples:
-  INSIGHTS_REPO_PATH=/path/to/repo okteto-dev.sh up     # Use custom repo path
+  INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/repo okteto-dev.sh up     # Use custom repo path
   okteto-dev.sh up host-inventory-service               # Start specific service
   okteto-dev.sh check                                   # Show status
   okteto-dev.sh exec host-inventory-service             # Connect to container
@@ -242,15 +279,18 @@ main() {
         exit 1
     fi
     
-    if [[ ! -f "okteto/okteto.yaml" ]]; then
-        error "okteto.yaml not found in okteto/ directory"
+    if [[ ! -f "okteto/okteto.template.yaml" ]]; then
+        error "okteto.template.yaml not found in okteto/ directory"
         exit 1
     fi
     
+    # Clean up any existing backup files from previous runs
+    rm -f okteto/okteto.yaml.bak okteto/okteto.yaml-e okteto/okteto.yaml.tmp
+    
     # Verify repo path exists
-    if [[ ! -d "$INSIGHTS_REPO_PATH" ]]; then
-        error "Insights repo path not found: $INSIGHTS_REPO_PATH"
-        error "Set INSIGHTS_REPO_PATH environment variable to your local insights-host-inventory path"
+    if [[ ! -d "$INSIGHTS_HOST_INVENTORY_REPO_PATH" ]]; then
+        error "Insights repo path not found: $INSIGHTS_HOST_INVENTORY_REPO_PATH"
+        error "Set INSIGHTS_HOST_INVENTORY_REPO_PATH environment variable to your local insights-host-inventory path"
         exit 1
     fi
     

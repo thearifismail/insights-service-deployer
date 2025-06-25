@@ -6,7 +6,7 @@ dev:
     command: ["nginx", "-g", "daemon off;"]
     workdir: /opt/app-root/src
     sync:
-      - ${INSIGHTS_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8001:8080  # Main service port
     environment:
@@ -14,21 +14,21 @@ dev:
     volumes:
       - /var/run/secrets
     securityContext:
-      runAsUser: 1001840000
-      runAsGroup: 1001840000
-      fsGroup: 1001840000
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
       runAsNonRoot: true
 
   # Read-only Service  
   host-inventory-service-reads:
-    image: quay.io/rarangan/host-inventory:13-Jun
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
     command: 
       - "bash"
       - "-c"
       - "mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && gunicorn --workers=4 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
-      - ${INSIGHTS_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8002:8000  # Reads service port
       - 9002:9229  # Debug port
@@ -41,21 +41,21 @@ dev:
     volumes:
       - /var/run/secrets
     securityContext:
-      runAsUser: 1001840000
-      runAsGroup: 1001840000
-      fsGroup: 1001840000
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
       runAsNonRoot: true
 
   # Secondary Read Service
   host-inventory-service-secondary-reads:
-    image: quay.io/rarangan/host-inventory:13-Jun
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
     command: 
       - "bash"
       - "-c"
       - "mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && gunicorn --workers=4 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
-      - ${INSIGHTS_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8003:8000  # Secondary reads service port
       - 9003:9229  # Debug port
@@ -68,21 +68,21 @@ dev:
     volumes:
       - /var/run/secrets
     securityContext:
-      runAsUser: 1001840000
-      runAsGroup: 1001840000
-      fsGroup: 1001840000
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
       runAsNonRoot: true
 
   # Write Service
   host-inventory-service-writes:
-    image: quay.io/rarangan/host-inventory:13-Jun
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
     command: 
       - "bash"
       - "-c"
       - "mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && gunicorn --workers=4 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
-      - ${INSIGHTS_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8004:8000  # Writes service port
       - 9004:9229  # Debug port
@@ -94,21 +94,21 @@ dev:
     volumes:
       - /var/run/secrets
     securityContext:
-      runAsUser: 1001840000
-      runAsGroup: 1001840000
-      fsGroup: 1001840000
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
       runAsNonRoot: true
 
   # Export Service
   host-inventory-export-service:
-    image: quay.io/rarangan/host-inventory:13-Jun
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
     command: 
       - "bash"
       - "-c"
       - "mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && gunicorn --workers=4 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
-      - ${INSIGHTS_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8005:8000  # Export service port
       - 9005:9229  # Debug port
@@ -120,7 +120,7 @@ dev:
     volumes:
       - /var/run/secrets
     securityContext:
-      runAsUser: 1001840000
-      runAsGroup: 1001840000
-      fsGroup: 1001840000
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
       runAsNonRoot: true
