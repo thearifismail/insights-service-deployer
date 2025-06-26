@@ -254,10 +254,10 @@ Commands:
 
 Examples:
   INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/repo okteto-dev.sh up     # Use custom repo path
-  okteto-dev.sh up host-inventory-service               # Start specific service
-  okteto-dev.sh check                                   # Show status
-  okteto-dev.sh exec host-inventory-service             # Connect to container
-  okteto-dev.sh down                                    # Stop all development
+  okteto-dev.sh up host-inventory-service-reads          # Start specific service
+  okteto-dev.sh check                                    # Show status
+  okteto-dev.sh exec host-inventory-service-reads        # Connect to container
+  okteto-dev.sh down                                     # Stop all development
 
 ClowdApp Management:
   This script automatically manages ClowdApp reconciliation to ensure proper
