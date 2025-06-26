@@ -30,7 +30,7 @@ release_current_namespace() {
   bonfire namespace release `oc project -q`
 }
 
-# parameters $1: deploy template branch; $2: custom image; $3: custom image tag
+# parameters $1: deploy template branch; $2: custom image; $3: custom image tag; $4: local schema file path
 deploy() {
   echo "Deploying..."
 
@@ -39,6 +39,8 @@ deploy() {
   HBI_CUSTOM_IMAGE="quay.io/cloudservices/insights-inventory"
   HBI_CUSTOM_IMAGE_TAG=latest
   HBI_CUSTOM_IMAGE_PARAMETER=""
+  LOCAL_SCHEMA_FILE=""
+  
   if [ -n "$1" ]; then
     HBI_DEPLOYMENT_TEMPLATE_REF="$1"
   else
@@ -51,6 +53,9 @@ deploy() {
   fi
   if [ -n "$3" ]; then
     HBI_CUSTOM_IMAGE_TAG="$3"
+  fi
+  if [ -n "$4" ]; then
+    LOCAL_SCHEMA_FILE="$4"
   fi
 
   HOST_FRONTEND_GIT_COMMIT=$(echo $(git ls-remote https://github.com/RedHatInsights/insights-inventory-frontend HEAD) | cut -d ' ' -f1 | cut -c1-7)
@@ -89,6 +94,7 @@ idmsvc" \
   --set-image-tag quay.io/redhat-services-prod/rh-platform-experien-tenant/insights-rbac-ui=latest
 
   setup_debezium
+  apply_schema "$LOCAL_SCHEMA_FILE"
 }
 
 setup_debezium() {
@@ -139,17 +145,39 @@ setup_kessel() {
   echo "Kessel inventory is setting up.."
   bonfire deploy kessel -C kessel-inventory --set-image-tag quay.io/redhat-services-prod/project-kessel-tenant/kessel-inventory/inventory-api=latest
 
-  apply_latest_schema
   setup_sink_connector
 }
 
-apply_latest_schema() {
-  echo "Applying latest SpiceDB schema from rbac-config"
-  curl -o deploy/schema.zed https://raw.githubusercontent.com/RedHatInsights/rbac-config/refs/heads/master/configs/stage/schemas/schema.zed
-  oc create configmap spicedb-schema --from-file=deploy/schema.zed -o yaml --dry-run=client | oc apply -f -
+apply_schema() {
+  local LOCAL_SCHEMA_FILE="$1"
+  local SCHEMA_FILE="deploy/schema.zed"
+  local CLEANUP_SCHEMA=true
+
+  if [ -n "$LOCAL_SCHEMA_FILE" ]; then
+    # Use local schema file
+    if [ ! -f "$LOCAL_SCHEMA_FILE" ]; then
+      echo "❌ ERROR: Local schema file not found: $LOCAL_SCHEMA_FILE"
+      exit 1
+    fi
+    echo "Applying local SpiceDB schema from: $LOCAL_SCHEMA_FILE"
+    cp "$LOCAL_SCHEMA_FILE" "$SCHEMA_FILE"
+  else
+    # Download latest schema from rbac-config (default behavior)
+    echo "Applying latest SpiceDB schema from rbac-config"
+    curl -o "$SCHEMA_FILE" https://raw.githubusercontent.com/RedHatInsights/rbac-config/refs/heads/master/configs/stage/schemas/schema.zed
+    if [ $? -ne 0 ]; then
+      echo "❌ ERROR: Failed to download schema from rbac-config"
+      exit 1
+    fi
+  fi
+  # Apply the schema
+  oc create configmap spicedb-schema --from-file="$SCHEMA_FILE" -o yaml --dry-run=client | oc apply -f -
   # Ensure the pods are using the new schema
   oc rollout restart deployment/kessel-relations-api
-  rm deploy/schema.zed
+  # Clean up only if we downloaded the file
+  if [ -z "$LOCAL_SCHEMA_FILE" ]; then
+    rm "$SCHEMA_FILE"
+  fi
 }
 
 setup_sink_connector() {
@@ -209,8 +237,11 @@ build_unleash_importer_image() {
       IMAGE_TAG="$IMAGE:$TAG"
       podman build --platform linux/amd64 . -f docker/Dockerfile.UnleashImporter -t "$IMAGE_TAG"
       podman push "$IMAGE_TAG"
-      podman rmi "$IMAGE_TAG"
-      echo "Image built, pushed to $IMAGE_TAG and deleted locally."
+      if podman rmi "$IMAGE_TAG" 2>/dev/null; then
+        echo "Image built, pushed to $IMAGE_TAG and deleted locally."
+      else
+        echo "Image built and pushed to $IMAGE_TAG (local cleanup skipped - image in use)."
+      fi
       UNLEASH_IMAGE="$IMAGE"
       UNLEASH_TAG="$TAG"
 
@@ -338,7 +369,30 @@ show_bonfire_namespace() {
 }
 
 usage() {
-  echo "Usage: $SCRIPT_NAME {release_current_namespace|deploy|deploy_with_hbi_demo|clean_download_debezium_configuration|deploy_unleash_importer_image|add_hosts_to_hbi|add_users}"
+  echo "Usage: $SCRIPT_NAME <command> [options]"
+  echo ""
+  echo "Commands:"
+  echo "  release_current_namespace           Release the current bonfire namespace"
+  echo "  deploy [template_ref] [image] [tag] [schema_file]"
+  echo "                                     Deploy the full stack"
+  echo "  deploy_with_hbi_demo               Deploy with demo data"
+  echo "  clean_download_debezium_configuration"
+  echo "                                     Clean downloaded debezium files"
+  echo "  deploy_unleash_importer_image      Deploy unleash importer"
+  echo "  add_hosts_to_hbi [org_id] [count]  Add test hosts to HBI"
+  echo "  add_users                          Add test users"
+  echo ""
+  echo "Deploy Options:"
+  echo "  template_ref    Git ref for host-inventory deploy template (default: latest commit)"
+  echo "  image          Custom host-inventory image (default: quay.io/cloudservices/insights-inventory)"
+  echo "  tag            Custom image tag (default: latest)"
+  echo "  schema_file    Path to local SpiceDB schema file (default: download from rbac-config)"
+  echo ""
+  echo "Examples:"
+  echo "  $SCRIPT_NAME deploy"
+  echo "  $SCRIPT_NAME deploy main quay.io/myrepo/inventory v1.0"
+  echo "  $SCRIPT_NAME deploy \"\" \"\" \"\" /path/to/local/schema.zed"
+  echo "  $SCRIPT_NAME deploy main quay.io/myrepo/inventory v1.0 ../rbac-config/configs/stage/schemas/schema.zed"
   exit 1
 }
 
@@ -350,7 +404,7 @@ case "$1" in
     login
     check_bonfire_namespace
     deploy_unleash_importer_image
-    deploy "$2" "$3" "$4"
+    deploy "$2" "$3" "$4" "$5"
     wait_for_sink_connector_ready
     show_bonfire_namespace
     ;;
@@ -358,7 +412,7 @@ case "$1" in
     login
     check_bonfire_namespace
     deploy_unleash_importer_image
-    deploy "$2" "$3" "$4"
+    deploy "$2" "$3" "$4" "$5"
     wait_for_sink_connector_ready
     add_users
     add_hosts_to_hbi
