@@ -25,7 +25,7 @@ dev:
     command: 
       - "bash"
       - "-c"
-      - "export HOME=/tmp && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.*/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 --wait-for-client -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
+      - "export HOME=/tmp && export PATH=/tmp/.local/bin:$PATH && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
@@ -52,7 +52,7 @@ dev:
     command: 
       - "bash"
       - "-c"
-      - "export HOME=/tmp && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.*/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 --wait-for-client -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
+      - "export HOME=/tmp && export PATH=/tmp/.local/bin:$PATH && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
@@ -79,7 +79,7 @@ dev:
     command: 
       - "bash"
       - "-c"
-      - "export HOME=/tmp && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.*/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 --wait-for-client -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
+      - "export HOME=/tmp && export PATH=/tmp/.local/bin:$PATH && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
@@ -105,7 +105,7 @@ dev:
     command: 
       - "bash"
       - "-c"
-      - "export HOME=/tmp && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.*/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 --wait-for-client -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
+      - "export HOME=/tmp && export PATH=/tmp/.local/bin:$PATH && mkdir -p /tmp/inventory/prometheus /tmp/gunicorn && pip install --user debugpy && export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH && python -m debugpy --listen 0.0.0.0:9229 -m gunicorn --workers=1 --threads=8 --limit-request-field_size=16380 --limit-request-line=8190 --worker-tmp-dir=/tmp/gunicorn --log-file=- --access-logfile=- -c gunicorn.conf.py -b 0.0.0.0:8000 -t 60 --worker-class=uvicorn.workers.UvicornWorker --reload run:app"
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
