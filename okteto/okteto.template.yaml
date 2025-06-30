@@ -44,7 +44,11 @@ dev:
 
         export PYTHONSTARTUP=/tmp/startup_debugpy.py
 
-        # Run gunicorn normally so --reload works
+        # Add current directory to Python path so restartable_uvicorn_worker.py can be imported
+        # (File is synced from local machine via okteto file sync)
+        export PYTHONPATH=/opt/app-root/src:$PYTHONPATH
+
+        # Run gunicorn with RestartableUvicornWorker (fixes reload issue #2339)
         exec gunicorn run:app \
           --reload \
           --workers=1 \
@@ -58,7 +62,7 @@ dev:
           -c gunicorn.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
-          --worker-class=uvicorn.workers.UvicornWorker
+          --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
@@ -104,7 +108,11 @@ dev:
 
         export PYTHONSTARTUP=/tmp/startup_debugpy.py
 
-        # Run gunicorn normally so --reload works
+        # Add current directory to Python path so restartable_uvicorn_worker.py can be imported
+        # (File is synced from local machine via okteto file sync)
+        export PYTHONPATH=/opt/app-root/src:$PYTHONPATH
+
+        # Run gunicorn with RestartableUvicornWorker (fixes reload issue #2339)
         exec gunicorn run:app \
           --reload \
           --workers=1 \
@@ -118,7 +126,7 @@ dev:
           -c gunicorn.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
-          --worker-class=uvicorn.workers.UvicornWorker
+          --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
