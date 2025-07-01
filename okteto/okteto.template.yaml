@@ -62,7 +62,13 @@ dev:
         echo '    def run(self):' >> /tmp/restartable_uvicorn_worker.py
         echo '        while True:' >> /tmp/restartable_uvicorn_worker.py
         echo '            if not self._worker.alive:' >> /tmp/restartable_uvicorn_worker.py
-        echo '                os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Send SIGHUP to master process for graceful worker reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # This should be faster than SIGINT to entire process' >> /tmp/restartable_uvicorn_worker.py
+        echo '                master_pid = os.getppid()' >> /tmp/restartable_uvicorn_worker.py
+        echo '                os.kill(master_pid, signal.SIGHUP)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                break  # Exit the monitoring loop after signaling reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Alternative: restart entire process (slower but more thorough)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
         echo '            time.sleep(self._interval)' >> /tmp/restartable_uvicorn_worker.py
         echo '' >> /tmp/restartable_uvicorn_worker.py
         echo 'class RestartableUvicornWorker(UvicornWorker):' >> /tmp/restartable_uvicorn_worker.py
@@ -158,7 +164,13 @@ dev:
         echo '    def run(self):' >> /tmp/restartable_uvicorn_worker.py
         echo '        while True:' >> /tmp/restartable_uvicorn_worker.py
         echo '            if not self._worker.alive:' >> /tmp/restartable_uvicorn_worker.py
-        echo '                os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Send SIGHUP to master process for graceful worker reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # This should be faster than SIGINT to entire process' >> /tmp/restartable_uvicorn_worker.py
+        echo '                master_pid = os.getppid()' >> /tmp/restartable_uvicorn_worker.py
+        echo '                os.kill(master_pid, signal.SIGHUP)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                break  # Exit the monitoring loop after signaling reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Alternative: restart entire process (slower but more thorough)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
         echo '            time.sleep(self._interval)' >> /tmp/restartable_uvicorn_worker.py
         echo '' >> /tmp/restartable_uvicorn_worker.py
         echo 'class RestartableUvicornWorker(UvicornWorker):' >> /tmp/restartable_uvicorn_worker.py
@@ -254,7 +266,13 @@ dev:
         echo '    def run(self):' >> /tmp/restartable_uvicorn_worker.py
         echo '        while True:' >> /tmp/restartable_uvicorn_worker.py
         echo '            if not self._worker.alive:' >> /tmp/restartable_uvicorn_worker.py
-        echo '                os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Send SIGHUP to master process for graceful worker reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # This should be faster than SIGINT to entire process' >> /tmp/restartable_uvicorn_worker.py
+        echo '                master_pid = os.getppid()' >> /tmp/restartable_uvicorn_worker.py
+        echo '                os.kill(master_pid, signal.SIGHUP)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                break  # Exit the monitoring loop after signaling reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Alternative: restart entire process (slower but more thorough)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
         echo '            time.sleep(self._interval)' >> /tmp/restartable_uvicorn_worker.py
         echo '' >> /tmp/restartable_uvicorn_worker.py
         echo 'class RestartableUvicornWorker(UvicornWorker):' >> /tmp/restartable_uvicorn_worker.py
@@ -349,7 +367,13 @@ dev:
         echo '    def run(self):' >> /tmp/restartable_uvicorn_worker.py
         echo '        while True:' >> /tmp/restartable_uvicorn_worker.py
         echo '            if not self._worker.alive:' >> /tmp/restartable_uvicorn_worker.py
-        echo '                os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Send SIGHUP to master process for graceful worker reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # This should be faster than SIGINT to entire process' >> /tmp/restartable_uvicorn_worker.py
+        echo '                master_pid = os.getppid()' >> /tmp/restartable_uvicorn_worker.py
+        echo '                os.kill(master_pid, signal.SIGHUP)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                break  # Exit the monitoring loop after signaling reload' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # Alternative: restart entire process (slower but more thorough)' >> /tmp/restartable_uvicorn_worker.py
+        echo '                # os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
         echo '            time.sleep(self._interval)' >> /tmp/restartable_uvicorn_worker.py
         echo '' >> /tmp/restartable_uvicorn_worker.py
         echo 'class RestartableUvicornWorker(UvicornWorker):' >> /tmp/restartable_uvicorn_worker.py
