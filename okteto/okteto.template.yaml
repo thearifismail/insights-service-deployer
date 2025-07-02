@@ -35,14 +35,16 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create PYTHONSTARTUP file to inject debugpy
-        cat <<EOF > /tmp/startup_debugpy.py
-        import debugpy
-        debugpy.listen(("0.0.0.0", 9229))
-        print("✅ Debugpy is listening on port 9229")
-        EOF
-
-        export PYTHONSTARTUP=/tmp/startup_debugpy.py
+        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
+        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    try:' >> /tmp/gunicorn_debug.conf.py
+        echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
+        echo '    except Exception as e:' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("❌ Failed to start debugpy: %s" % e)' >> /tmp/gunicorn_debug.conf.py
 
         # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
         # Using echo commands to avoid YAML heredoc syntax issues
@@ -97,7 +99,7 @@ dev:
           --log-file=- \
           --access-logfile=- \
           --log-level debug \
-          -c gunicorn.conf.py \
+          -c /tmp/gunicorn_debug.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
           --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
@@ -137,14 +139,16 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create PYTHONSTARTUP file to inject debugpy
-        cat <<EOF > /tmp/startup_debugpy.py
-        import debugpy
-        debugpy.listen(("0.0.0.0", 9229))
-        print("✅ Debugpy is listening on port 9229")
-        EOF
-
-        export PYTHONSTARTUP=/tmp/startup_debugpy.py
+        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
+        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    try:' >> /tmp/gunicorn_debug.conf.py
+        echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
+        echo '    except Exception as e:' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("❌ Failed to start debugpy: %s" % e)' >> /tmp/gunicorn_debug.conf.py
 
         # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
         # Using echo commands to avoid YAML heredoc syntax issues
@@ -199,7 +203,7 @@ dev:
           --log-file=- \
           --access-logfile=- \
           --log-level debug \
-          -c gunicorn.conf.py \
+          -c /tmp/gunicorn_debug.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
           --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
@@ -239,14 +243,16 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create PYTHONSTARTUP file to inject debugpy
-        cat <<EOF > /tmp/startup_debugpy.py
-        import debugpy
-        debugpy.listen(("0.0.0.0", 9229))
-        print("✅ Debugpy is listening on port 9229")
-        EOF
-
-        export PYTHONSTARTUP=/tmp/startup_debugpy.py
+        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
+        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    try:' >> /tmp/gunicorn_debug.conf.py
+        echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
+        echo '    except Exception as e:' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("❌ Failed to start debugpy: %s" % e)' >> /tmp/gunicorn_debug.conf.py
 
         # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
         # Using echo commands to avoid YAML heredoc syntax issues
@@ -301,7 +307,7 @@ dev:
           --log-file=- \
           --access-logfile=- \
           --log-level debug \
-          -c gunicorn.conf.py \
+          -c /tmp/gunicorn_debug.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
           --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
@@ -340,14 +346,16 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create PYTHONSTARTUP file to inject debugpy
-        cat <<EOF > /tmp/startup_debugpy.py
-        import debugpy
-        debugpy.listen(("0.0.0.0", 9229))
-        print("✅ Debugpy is listening on port 9229")
-        EOF
-
-        export PYTHONSTARTUP=/tmp/startup_debugpy.py
+        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
+        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    try:' >> /tmp/gunicorn_debug.conf.py
+        echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
+        echo '    except Exception as e:' >> /tmp/gunicorn_debug.conf.py
+        echo '        print("❌ Failed to start debugpy: %s" % e)' >> /tmp/gunicorn_debug.conf.py
 
         # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
         # Using echo commands to avoid YAML heredoc syntax issues
@@ -402,7 +410,7 @@ dev:
           --log-file=- \
           --access-logfile=- \
           --log-level debug \
-          -c gunicorn.conf.py \
+          -c /tmp/gunicorn_debug.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
           --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
