@@ -35,11 +35,24 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
-        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
+        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# === Okteto Debug Extension ===' >> /tmp/gunicorn_debug.conf.py
+        echo 'import debugpy' >> /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# Preserve original post_worker_init if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo 'try:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = post_worker_init' >> /tmp/gunicorn_debug.conf.py
+        echo 'except NameError:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = None' >> /tmp/gunicorn_debug.conf.py
         echo '' >> /tmp/gunicorn_debug.conf.py
         echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
-        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Extended post_worker_init with debugpy support."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Call original hook first if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo '    if _original_post_worker_init:' >> /tmp/gunicorn_debug.conf.py
+        echo '        _original_post_worker_init(worker)' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Add debugpy initialization' >> /tmp/gunicorn_debug.conf.py
         echo '    try:' >> /tmp/gunicorn_debug.conf.py
         echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
         echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
@@ -139,11 +152,24 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
-        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
+        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# === Okteto Debug Extension ===' >> /tmp/gunicorn_debug.conf.py
+        echo 'import debugpy' >> /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# Preserve original post_worker_init if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo 'try:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = post_worker_init' >> /tmp/gunicorn_debug.conf.py
+        echo 'except NameError:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = None' >> /tmp/gunicorn_debug.conf.py
         echo '' >> /tmp/gunicorn_debug.conf.py
         echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
-        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Extended post_worker_init with debugpy support."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Call original hook first if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo '    if _original_post_worker_init:' >> /tmp/gunicorn_debug.conf.py
+        echo '        _original_post_worker_init(worker)' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Add debugpy initialization' >> /tmp/gunicorn_debug.conf.py
         echo '    try:' >> /tmp/gunicorn_debug.conf.py
         echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
         echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
@@ -243,11 +269,24 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
-        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
+        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# === Okteto Debug Extension ===' >> /tmp/gunicorn_debug.conf.py
+        echo 'import debugpy' >> /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# Preserve original post_worker_init if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo 'try:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = post_worker_init' >> /tmp/gunicorn_debug.conf.py
+        echo 'except NameError:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = None' >> /tmp/gunicorn_debug.conf.py
         echo '' >> /tmp/gunicorn_debug.conf.py
         echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
-        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Extended post_worker_init with debugpy support."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Call original hook first if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo '    if _original_post_worker_init:' >> /tmp/gunicorn_debug.conf.py
+        echo '        _original_post_worker_init(worker)' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Add debugpy initialization' >> /tmp/gunicorn_debug.conf.py
         echo '    try:' >> /tmp/gunicorn_debug.conf.py
         echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
         echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
@@ -346,11 +385,24 @@ dev:
         # Install debugpy and watchdog if needed
         pip install --user --no-cache-dir debugpy watchdog
 
-        # Create gunicorn config with debugpy hook using echo to avoid YAML issues
-        echo 'import debugpy' > /tmp/gunicorn_debug.conf.py
+        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
+        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# === Okteto Debug Extension ===' >> /tmp/gunicorn_debug.conf.py
+        echo 'import debugpy' >> /tmp/gunicorn_debug.conf.py
+        echo '' >> /tmp/gunicorn_debug.conf.py
+        echo '# Preserve original post_worker_init if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo 'try:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = post_worker_init' >> /tmp/gunicorn_debug.conf.py
+        echo 'except NameError:' >> /tmp/gunicorn_debug.conf.py
+        echo '    _original_post_worker_init = None' >> /tmp/gunicorn_debug.conf.py
         echo '' >> /tmp/gunicorn_debug.conf.py
         echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
-        echo '    """Called just after a worker has been forked."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    """Extended post_worker_init with debugpy support."""' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Call original hook first if it exists' >> /tmp/gunicorn_debug.conf.py
+        echo '    if _original_post_worker_init:' >> /tmp/gunicorn_debug.conf.py
+        echo '        _original_post_worker_init(worker)' >> /tmp/gunicorn_debug.conf.py
+        echo '    # Add debugpy initialization' >> /tmp/gunicorn_debug.conf.py
         echo '    try:' >> /tmp/gunicorn_debug.conf.py
         echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
         echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
