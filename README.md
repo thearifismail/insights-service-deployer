@@ -205,4 +205,8 @@ curl -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwiaW50
 
 For MQ services, set breakpoints in `inv_mq_service.py` and related message processing code.
 
+### Debugging Behavior
+
+**MQ Services**: Start immediately and accept debugger connections at any time. You can attach VS Code after the service is running - no waiting required.
+
 **Note**: Ensure the Python extension is installed in VS Code/Cursor for `debugpy` support.

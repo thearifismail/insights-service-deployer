@@ -11,12 +11,118 @@ dev:
         export PATH=$HOME/.local/bin:$PATH
         export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
 
-        # Install debugpy if needed
-        pip install --user --no-cache-dir debugpy
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
 
-        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
-        # Debuggers can still attach to the running process
-        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                self.process = subprocess.Popen(cmd)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
@@ -54,12 +160,118 @@ dev:
         export PATH=$HOME/.local/bin:$PATH
         export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
 
-        # Install debugpy if needed
-        pip install --user --no-cache-dir debugpy
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
 
-        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
-        # Debuggers can still attach to the running process
-        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                self.process = subprocess.Popen(cmd)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
@@ -97,12 +309,118 @@ dev:
         export PATH=$HOME/.local/bin:$PATH
         export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
 
-        # Install debugpy if needed
-        pip install --user --no-cache-dir debugpy
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
 
-        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
-        # Debuggers can still attach to the running process
-        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                self.process = subprocess.Popen(cmd)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
@@ -140,12 +458,118 @@ dev:
         export PATH=$HOME/.local/bin:$PATH
         export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
 
-        # Install debugpy if needed
-        pip install --user --no-cache-dir debugpy
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
 
-        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
-        # Debuggers can still attach to the running process
-        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                self.process = subprocess.Popen(cmd)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
