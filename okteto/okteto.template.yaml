@@ -1,16 +1,170 @@
 # Multiple development containers for different host-inventory services
 dev:
-  # Main Service (Nginx Proxy)
-  host-inventory-service:
-    image: registry.access.redhat.com/ubi9/nginx-124:latest
-    command: ["nginx", "-g", "daemon off;"]
+  # MQ Priority 1 Service
+  host-inventory-mq-p1:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy if needed
+        pip install --user --no-cache-dir debugpy
+
+        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
+        # Debuggers can still attach to the running process
+        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
     workdir: /opt/app-root/src
     sync:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
-      - 8001:8080  # Main service port
+      - 9000:9000  # Health check port
+      - 9006:9229  # Debug port
     environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_P1
       - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=platform.inventory.host-ingress-p1
+      - KAFKA_HOST_INGRESS_TOPIC=platform.inventory.host-ingress-p1
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # MQ Priority Min Service
+  host-inventory-mq-pmin:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy if needed
+        pip install --user --no-cache-dir debugpy
+
+        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
+        # Debuggers can still attach to the running process
+        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 9001:9000  # Health check port
+      - 9007:9229  # Debug port
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_PMIN
+      - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=platform.inventory.host-ingress
+      - KAFKA_HOST_INGRESS_TOPIC=platform.inventory.host-ingress
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # MQ System Profile Service
+  host-inventory-mq-sp:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy if needed
+        pip install --user --no-cache-dir debugpy
+
+        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
+        # Debuggers can still attach to the running process
+        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 9002:9000  # Health check port
+      - 9008:9229  # Debug port
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_SP
+      - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_TOPIC=platform.inventory.host-ingress
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # MQ Workspaces Service
+  host-inventory-mq-workspaces:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy if needed
+        pip install --user --no-cache-dir debugpy
+
+        # Run the MQ service with debugpy (no --wait-for-client so it starts immediately)
+        # Debuggers can still attach to the running process
+        exec python -m debugpy --listen 0.0.0.0:9229 ./inv_mq_service.py
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 9003:9000  # Health check port
+      - 9009:9229  # Debug port
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_WORKSPACES
+      - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=outbox.event.workspace
+      - KAFKA_WORKSPACES_TOPIC=outbox.event.workspace
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+      - CONSUMER_MQ_BROKER=
     volumes:
       - /var/run/secrets
     securityContext:
@@ -121,7 +275,7 @@ dev:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8002:8000  # Reads service port
-      - 9002:9229  # Debug port
+      - 9010:9229  # Debug port
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=READS
@@ -238,7 +392,7 @@ dev:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8003:8000  # Secondary reads service port
-      - 9003:9229  # Debug port
+      - 9011:9229  # Debug port
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=SECONDARY_READS
@@ -355,126 +509,10 @@ dev:
       - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
     forward:
       - 8004:8000  # Writes service port
-      - 9004:9229  # Debug port
+      - 9012:9229  # Debug port
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=WRITES
-      - CLOWDER_ENABLED=true
-      - PROMETHEUS_MULTIPROC_DIR=/tmp/inventory/prometheus
-    volumes:
-      - /var/run/secrets
-    securityContext:
-      runAsUser: ${OKTETO_USER_ID}
-      runAsGroup: ${OKTETO_GROUP_ID}
-      fsGroup: ${OKTETO_FS_GROUP_ID}
-      runAsNonRoot: true
-
-  # Export Service
-  host-inventory-export-service:
-    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
-    command: 
-      - "bash"
-      - "-c"
-      - |
-        export HOME=/tmp
-        export PATH=$HOME/.local/bin:$PATH
-        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
-
-        mkdir -p /tmp/inventory/prometheus /tmp/gunicorn
-
-        # Install debugpy and watchdog if needed
-        pip install --user --no-cache-dir debugpy watchdog
-
-        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
-        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
-        echo '' >> /tmp/gunicorn_debug.conf.py
-        echo '# === Okteto Debug Extension ===' >> /tmp/gunicorn_debug.conf.py
-        echo 'import debugpy' >> /tmp/gunicorn_debug.conf.py
-        echo '' >> /tmp/gunicorn_debug.conf.py
-        echo '# Preserve original post_worker_init if it exists' >> /tmp/gunicorn_debug.conf.py
-        echo 'try:' >> /tmp/gunicorn_debug.conf.py
-        echo '    _original_post_worker_init = post_worker_init' >> /tmp/gunicorn_debug.conf.py
-        echo 'except NameError:' >> /tmp/gunicorn_debug.conf.py
-        echo '    _original_post_worker_init = None' >> /tmp/gunicorn_debug.conf.py
-        echo '' >> /tmp/gunicorn_debug.conf.py
-        echo 'def post_worker_init(worker):' >> /tmp/gunicorn_debug.conf.py
-        echo '    """Extended post_worker_init with debugpy support."""' >> /tmp/gunicorn_debug.conf.py
-        echo '    # Call original hook first if it exists' >> /tmp/gunicorn_debug.conf.py
-        echo '    if _original_post_worker_init:' >> /tmp/gunicorn_debug.conf.py
-        echo '        _original_post_worker_init(worker)' >> /tmp/gunicorn_debug.conf.py
-        echo '    # Add debugpy initialization' >> /tmp/gunicorn_debug.conf.py
-        echo '    try:' >> /tmp/gunicorn_debug.conf.py
-        echo '        debugpy.listen(("0.0.0.0", 9229))' >> /tmp/gunicorn_debug.conf.py
-        echo '        print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)' >> /tmp/gunicorn_debug.conf.py
-        echo '    except Exception as e:' >> /tmp/gunicorn_debug.conf.py
-        echo '        print("❌ Failed to start debugpy: %s" % e)' >> /tmp/gunicorn_debug.conf.py
-
-        # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
-        # Using echo commands to avoid YAML heredoc syntax issues
-        echo 'import os' > /tmp/restartable_uvicorn_worker.py
-        echo 'import signal' >> /tmp/restartable_uvicorn_worker.py
-        echo 'import threading' >> /tmp/restartable_uvicorn_worker.py
-        echo 'import time' >> /tmp/restartable_uvicorn_worker.py
-        echo 'from uvicorn.workers import UvicornWorker' >> /tmp/restartable_uvicorn_worker.py
-        echo '' >> /tmp/restartable_uvicorn_worker.py
-        echo 'class ReloaderThread(threading.Thread):' >> /tmp/restartable_uvicorn_worker.py
-        echo '    def __init__(self, worker, sleep_interval=1.0):' >> /tmp/restartable_uvicorn_worker.py
-        echo '        super().__init__()' >> /tmp/restartable_uvicorn_worker.py
-        echo '        self.setDaemon(True)' >> /tmp/restartable_uvicorn_worker.py
-        echo '        self._worker = worker' >> /tmp/restartable_uvicorn_worker.py
-        echo '        self._interval = sleep_interval' >> /tmp/restartable_uvicorn_worker.py
-        echo '' >> /tmp/restartable_uvicorn_worker.py
-        echo '    def run(self):' >> /tmp/restartable_uvicorn_worker.py
-        echo '        while True:' >> /tmp/restartable_uvicorn_worker.py
-        echo '            if not self._worker.alive:' >> /tmp/restartable_uvicorn_worker.py
-        echo '                # Send SIGHUP to master process for graceful worker reload' >> /tmp/restartable_uvicorn_worker.py
-        echo '                # This should be faster than SIGINT to entire process' >> /tmp/restartable_uvicorn_worker.py
-        echo '                master_pid = os.getppid()' >> /tmp/restartable_uvicorn_worker.py
-        echo '                os.kill(master_pid, signal.SIGHUP)' >> /tmp/restartable_uvicorn_worker.py
-        echo '                break  # Exit the monitoring loop after signaling reload' >> /tmp/restartable_uvicorn_worker.py
-        echo '                # Alternative: restart entire process (slower but more thorough)' >> /tmp/restartable_uvicorn_worker.py
-        echo '                # os.kill(os.getpid(), signal.SIGINT)' >> /tmp/restartable_uvicorn_worker.py
-        echo '            time.sleep(self._interval)' >> /tmp/restartable_uvicorn_worker.py
-        echo '' >> /tmp/restartable_uvicorn_worker.py
-        echo 'class RestartableUvicornWorker(UvicornWorker):' >> /tmp/restartable_uvicorn_worker.py
-        echo '    CONFIG_KWARGS = {"loop": "uvloop", "http": "httptools"}' >> /tmp/restartable_uvicorn_worker.py
-        echo '' >> /tmp/restartable_uvicorn_worker.py
-        echo '    def __init__(self, *args, **kwargs):' >> /tmp/restartable_uvicorn_worker.py
-        echo '        super().__init__(*args, **kwargs)' >> /tmp/restartable_uvicorn_worker.py
-        echo '        self._reloader_thread = ReloaderThread(self)' >> /tmp/restartable_uvicorn_worker.py
-        echo '' >> /tmp/restartable_uvicorn_worker.py
-        echo '    def run(self):' >> /tmp/restartable_uvicorn_worker.py
-        echo '        if self.cfg.reload:' >> /tmp/restartable_uvicorn_worker.py
-        echo '            self._reloader_thread.start()' >> /tmp/restartable_uvicorn_worker.py
-        echo '        super().run()' >> /tmp/restartable_uvicorn_worker.py
-
-        # Add /tmp to Python path so our custom worker can be imported
-        export PYTHONPATH=/tmp:$PYTHONPATH
-
-        # Run gunicorn with RestartableUvicornWorker (fixes reload issue #2339)
-        exec gunicorn run:app \
-          --reload \
-          --workers=1 \
-          --threads=8 \
-          --limit-request-field_size=16380 \
-          --limit-request-line=8190 \
-          --worker-tmp-dir=/tmp/gunicorn \
-          --log-file=- \
-          --access-logfile=- \
-          --log-level debug \
-          -c /tmp/gunicorn_debug.conf.py \
-          -b 0.0.0.0:8000 \
-          -t 60 \
-          --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
-    workdir: /opt/app-root/src
-    sync:
-      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
-    forward:
-      - 8005:8000  # Export service port
-      - 9005:9229  # Debug port
-    environment:
-      - LOG_LEVEL=DEBUG
-      - SERVICE_TYPE=EXPORT
       - CLOWDER_ENABLED=true
       - PROMETHEUS_MULTIPROC_DIR=/tmp/inventory/prometheus
     volumes:
