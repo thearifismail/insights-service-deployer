@@ -135,3 +135,26 @@ export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/insights-host-inventory
 ```
 
 Development containers sync your local code changes and reload automatically (~2-3 seconds). The script handles ClowdApp reconciliation and deployment scaling automatically.
+
+### VS Code/Cursor Debugging Setup
+
+After starting development with `./okteto-dev.sh up`, you can debug the Python services:
+
+1. Copy the debug configuration to your local insights-host-inventory repo:
+   ```bash
+   cp .vscode/launch.json /path/to/insights-host-inventory/.vscode/
+   ```
+
+2. Open your insights-host-inventory repo in VS Code/Cursor
+
+3. Set breakpoints and start debugging using:
+   - **Single service**: Select specific service (e.g., "🔍 Debug: Host Inventory Secondary Reads")  
+   - **All services**: Select "🔍 Debug: All Host Inventory Services"
+
+Debug ports are automatically forwarded:
+- Port 9002 → Host Inventory Reads
+- Port 9003 → Host Inventory Secondary Reads  
+- Port 9004 → Host Inventory Writes
+- Port 9005 → Host Inventory Export
+
+**Note**: Ensure the Python extension is installed in VS Code/Cursor for `debugpy` support.

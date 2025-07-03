@@ -1,0 +1,112 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "🔍 Debug: Host Inventory Reads",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9002
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Host Inventory Services",
+          "order": 1
+        }
+      },
+      {
+        "name": "🔍 Debug: Host Inventory Secondary Reads",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9003
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Host Inventory Services",
+          "order": 2
+        }
+      },
+      {
+        "name": "🔍 Debug: Host Inventory Writes",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9004
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Host Inventory Services",
+          "order": 3
+        }
+      },
+      {
+        "name": "🔍 Debug: Host Inventory Export",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9005
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Host Inventory Services",
+          "order": 4
+        }
+      }
+    ],
+    "compounds": [
+      {
+        "name": "🔍 Debug: All Host Inventory Services",
+        "configurations": [
+          "🔍 Debug: Host Inventory Reads",
+          "🔍 Debug: Host Inventory Secondary Reads",
+          "🔍 Debug: Host Inventory Writes",
+          "🔍 Debug: Host Inventory Export"
+        ],
+        "presentation": {
+          "group": "Host Inventory Services",
+          "order": 5
+        }
+      }
+    ]
+  }
