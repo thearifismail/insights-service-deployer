@@ -6,9 +6,6 @@ set -e
 # Configuration - can be overridden by environment variables
 CLOWDAPP_NAME="${CLOWDAPP_NAME:-host-inventory}"
 
-# Default services (hardcoded based on deployment discovery)
-DEFAULT_SERVICES=("host-inventory-service" "host-inventory-service-reads" "host-inventory-service-secondary-reads" "host-inventory-service-writes" "host-inventory-export-service")
-
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -18,6 +15,33 @@ NC='\033[0m'
 log() { echo -e "${GREEN}[okteto-dev]${NC} $1" >&2; }
 warn() { echo -e "${YELLOW}[okteto-dev]${NC} $1" >&2; }
 error() { echo -e "${RED}[okteto-dev]${NC} $1" >&2; }
+
+# Function to extract services from okteto.template.yaml
+get_default_services() {
+    if [[ ! -f "okteto/okteto.template.yaml" ]]; then
+        error "okteto.template.yaml not found in okteto/ directory"
+        error "This file is required to determine available services"
+        exit 1
+    fi
+    
+    # Extract service names from the dev: section
+    # Use awk to extract everything from 'dev:' until the next top-level YAML key
+    awk '
+        /^dev:/ { in_dev=1; next }
+        /^[a-zA-Z].*:/ { in_dev=0 }
+        in_dev && /^  [a-zA-Z]/ && !/^  #/ { 
+            gsub(/^  /, ""); 
+            gsub(/:.*/, ""); 
+            print 
+        }
+    ' okteto/okteto.template.yaml
+}
+
+# Load default services dynamically (compatible with older bash)
+DEFAULT_SERVICES=()
+while IFS= read -r service; do
+    [[ -n "$service" ]] && DEFAULT_SERVICES+=("$service")
+done < <(get_default_services)
 
 # ClowdApp management functions
 check_clowdapp_status() {
@@ -297,10 +321,15 @@ main() {
         exit 1
     fi
     
-    if [[ ! -f "okteto/okteto.template.yaml" ]]; then
-        error "okteto.template.yaml not found in okteto/ directory"
+    # Validate that we successfully loaded services from template
+    if [[ ${#DEFAULT_SERVICES[@]} -eq 0 ]]; then
+        error "No services found in okteto.template.yaml"
+        error "Please check that the template file contains a 'dev:' section with service definitions"
         exit 1
     fi
+    
+    # Debug: show loaded services
+    log "Loaded ${#DEFAULT_SERVICES[@]} services from okteto.template.yaml: ${DEFAULT_SERVICES[*]}"
     
     # Clean up any existing backup files from previous runs
     rm -f okteto/okteto.yaml.bak okteto/okteto.yaml-e okteto/okteto.yaml.tmp
