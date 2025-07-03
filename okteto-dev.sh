@@ -4,7 +4,6 @@
 set -e
 
 # Configuration - can be overridden by environment variables
-INSIGHTS_HOST_INVENTORY_REPO_PATH="${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}"
 CLOWDAPP_NAME="${CLOWDAPP_NAME:-host-inventory}"
 
 # Default services (hardcoded based on deployment discovery)
@@ -70,7 +69,7 @@ check_dev_status() {
 show_status() {
     local services=("${@:-${DEFAULT_SERVICES[@]}}")
     log "Current development status:"
-    log "Repo path: $INSIGHTS_HOST_INVENTORY_REPO_PATH"
+    log "Repo path: ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-"<NOT SET>"}"
     
     # Show ClowdApp status
     local clowdapp_disabled=$(check_clowdapp_status)
@@ -251,10 +250,10 @@ show_help() {
 Usage: okteto-dev.sh {up|down|check|exec} [service]
 
 Configuration:
-  Set INSIGHTS_HOST_INVENTORY_REPO_PATH environment variable to your local repo path
-  Current: $INSIGHTS_HOST_INVENTORY_REPO_PATH
+  INSIGHTS_HOST_INVENTORY_REPO_PATH (required) - Path to your local insights-host-inventory repository
+  Current: ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-"<NOT SET>"}
   
-  Set CLOWDAPP_NAME environment variable to override ClowdApp name
+  CLOWDAPP_NAME (optional) - Override ClowdApp name
   Current: $CLOWDAPP_NAME
 
 Commands:
@@ -306,10 +305,21 @@ main() {
     # Clean up any existing backup files from previous runs
     rm -f okteto/okteto.yaml.bak okteto/okteto.yaml-e okteto/okteto.yaml.tmp
     
-    # Verify repo path exists
+    # Verify repo path is set and exists
+    if [[ -z "$INSIGHTS_HOST_INVENTORY_REPO_PATH" ]]; then
+        error "INSIGHTS_HOST_INVENTORY_REPO_PATH environment variable is not set"
+        error ""
+        error "Please set it to your local insights-host-inventory repository path:"
+        error "  export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/your/insights-host-inventory"
+        error ""
+        error "Example usage:"
+        error "  INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/repo $0 up host-inventory-service-reads"
+        exit 1
+    fi
+    
     if [[ ! -d "$INSIGHTS_HOST_INVENTORY_REPO_PATH" ]]; then
         error "Insights repo path not found: $INSIGHTS_HOST_INVENTORY_REPO_PATH"
-        error "Set INSIGHTS_HOST_INVENTORY_REPO_PATH environment variable to your local insights-host-inventory path"
+        error "Please verify the path exists and contains your insights-host-inventory repository"
         exit 1
     fi
     

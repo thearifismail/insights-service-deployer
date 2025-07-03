@@ -141,7 +141,7 @@ Development containers sync your local code changes and reload automatically (~1
 
 ### VS Code/Cursor Debugging Setup
 
-After starting development with `./okteto-dev.sh up <service>`, you can debug the Python services:
+After starting development with `./okteto-dev.sh up [service]`, you can debug the Python services:
 
 1. Copy the debug configuration to your local insights-host-inventory repo:
    ```bash
