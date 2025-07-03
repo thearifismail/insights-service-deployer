@@ -107,14 +107,26 @@ show_status() {
 
 # Main okteto commands
 okteto_up() {
-    local services=("${@:-${DEFAULT_SERVICES[@]}}")
-    local status=$(check_dev_status "${services[@]}")
-    local active=$(echo "$status" | cut -d'|' -f1)
-    local inactive=$(echo "$status" | cut -d'|' -f2)
+    # Accept zero or one service argument only
+    local service="$1"
     
-    if [[ -n "$active" && -z "$inactive" ]]; then
-        log "All services already in development mode (idempotent)"
-        return 0
+    if [[ -n "$service" ]]; then
+        # Validate the service exists in our list
+        if [[ ! " ${DEFAULT_SERVICES[*]} " =~ " ${service} " ]]; then
+            error "Invalid service: $service"
+            error "Available services: ${DEFAULT_SERVICES[*]}"
+            exit 1
+        fi
+        
+        log "Starting development for service: $service"
+        
+        # Check if this specific service is already active
+        if oc get deployment "${service}-okteto" >/dev/null 2>&1; then
+            log "Service $service already in development mode (idempotent)"
+            return 0
+        fi
+    else
+        log "Starting okteto (interactive service selection)"
     fi
     
     # Disable ClowdApp reconciliation before starting development
@@ -124,9 +136,6 @@ okteto_up() {
     else
         log "ClowdApp reconciliation already disabled"
     fi
-    
-    [[ -n "$active" ]] && log "Already active: $active"
-    [[ -n "$inactive" ]] && log "Starting development for: $inactive"
     
     # Update okteto.yaml with current namespace SCC settings and image info
     local namespace uid_range uid_start image_full image_name image_tag
@@ -151,7 +160,11 @@ okteto_up() {
     
     # Set the repo path for okteto
     export INSIGHTS_HOST_INVENTORY_REPO_PATH
-    okteto up --file okteto/okteto.yaml --namespace "$(oc project -q)" "$@"
+    if [[ -n "$service" ]]; then
+        okteto up --file okteto/okteto.yaml --namespace "$(oc project -q)" "$service"
+    else
+        okteto up --file okteto/okteto.yaml --namespace "$(oc project -q)"
+    fi
 }
 
 okteto_down() {
@@ -235,7 +248,7 @@ okteto_exec() {
 
 show_help() {
     cat >&2 << EOF
-Usage: okteto-dev.sh {up|down|check|exec} [services...]
+Usage: okteto-dev.sh {up|down|check|exec} [service]
 
 Configuration:
   Set INSIGHTS_HOST_INVENTORY_REPO_PATH environment variable to your local repo path
@@ -245,16 +258,22 @@ Configuration:
   Current: $CLOWDAPP_NAME
 
 Commands:
-  up [services...]     - Start development (default: all host-inventory services)
+  up [service]         - Start development for one service
+                        No service: interactive selection
+                        With service: start that specific service
                         Automatically disables ClowdApp reconciliation
   down                 - Stop all development containers  
                         Automatically re-enables ClowdApp reconciliation
   check [services...]  - Show development status including ClowdApp state
   exec <service> [cmd] - Execute command in development container
 
+Available Services:
+  ${DEFAULT_SERVICES[*]}
+
 Examples:
-  INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/repo okteto-dev.sh up     # Use custom repo path
+  INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/repo okteto-dev.sh up host-inventory-service-reads
   okteto-dev.sh up host-inventory-service-reads          # Start specific service
+  okteto-dev.sh up                                       # Interactive service selection
   okteto-dev.sh check                                    # Show status
   okteto-dev.sh exec host-inventory-service-reads        # Connect to container
   okteto-dev.sh down                                     # Stop all development
@@ -296,7 +315,7 @@ main() {
     
     # Handle commands
     case "${1:-up}" in
-        up)     shift; okteto_up "$@" ;;
+        up)     shift; okteto_up "$1" ;;
         down)   okteto_down ;;
         check)  shift; show_status "$@" ;;
         exec)   shift; okteto_exec "$@" ;;

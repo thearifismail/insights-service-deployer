@@ -124,8 +124,11 @@ After deployment, you can develop services locally using Okteto for fast code-re
 # Set your local repo path (required)
 export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/insights-host-inventory
 
-# Start development mode for specific services
-./okteto-dev.sh up host-inventory-service host-inventory-export-service
+# Start development mode - interactive service selection
+./okteto-dev.sh up
+
+# Or start development mode for a specific service
+./okteto-dev.sh up host-inventory-service-reads
 
 # Check status
 ./okteto-dev.sh check
@@ -134,11 +137,11 @@ export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/insights-host-inventory
 ./okteto-dev.sh down
 ```
 
-Development containers sync your local code changes and reload automatically (~2-3 seconds). The script handles ClowdApp reconciliation and deployment scaling automatically.
+Development containers sync your local code changes and reload automatically (~13 seconds). You can either let okteto provide interactive service selection, or specify one service to start directly. The script handles ClowdApp reconciliation and deployment scaling automatically.
 
 ### VS Code/Cursor Debugging Setup
 
-After starting development with `./okteto-dev.sh up`, you can debug the Python services:
+After starting development with `./okteto-dev.sh up <service>`, you can debug the Python services:
 
 1. Copy the debug configuration to your local insights-host-inventory repo:
    ```bash
