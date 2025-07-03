@@ -307,13 +307,15 @@ main() {
     
     # Verify repo path is set and exists
     if [[ -z "$INSIGHTS_HOST_INVENTORY_REPO_PATH" ]]; then
-        error "INSIGHTS_HOST_INVENTORY_REPO_PATH environment variable is not set"
-        error ""
-        error "Please set it to your local insights-host-inventory repository path:"
-        error "  export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/your/insights-host-inventory"
-        error ""
-        error "Example usage:"
-        error "  INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/repo $0 up host-inventory-service-reads"
+        warn "🔧 Almost ready! Just need to set up your local repository path first."
+        warn ""
+        warn "Please set INSIGHTS_HOST_INVENTORY_REPO_PATH to your local insights-host-inventory repository:"
+        warn "  export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/your/insights-host-inventory"
+        warn ""
+        warn "Then you can run:"
+        warn "  $0 up host-inventory-service-reads"
+        warn ""
+        warn "💡 Tip: Add the export to your ~/.bashrc or ~/.zshrc to make it permanent!"
         exit 1
     fi
     
