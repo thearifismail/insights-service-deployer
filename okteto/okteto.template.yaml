@@ -610,8 +610,8 @@ dev:
 
         mkdir -p /tmp/inventory/prometheus /tmp/gunicorn
 
-        # Install debugpy and watchdog if needed
-        pip install --user --no-cache-dir debugpy watchdog
+        # Install debugpy for debugging support
+        pip install --user --no-cache-dir debugpy
 
         # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
         cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
@@ -692,7 +692,7 @@ dev:
           --worker-tmp-dir=/tmp/gunicorn \
           --log-file=- \
           --access-logfile=- \
-          --log-level debug \
+          --log-level info \
           -c /tmp/gunicorn_debug.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
@@ -730,8 +730,8 @@ dev:
 
         mkdir -p /tmp/inventory/prometheus /tmp/gunicorn
 
-        # Install debugpy and watchdog if needed
-        pip install --user --no-cache-dir debugpy watchdog
+        # Install debugpy for debugging support
+        pip install --user --no-cache-dir debugpy
 
         # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
         cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
@@ -812,7 +812,7 @@ dev:
           --worker-tmp-dir=/tmp/gunicorn \
           --log-file=- \
           --access-logfile=- \
-          --log-level debug \
+          --log-level info \
           -c /tmp/gunicorn_debug.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
@@ -850,8 +850,8 @@ dev:
 
         mkdir -p /tmp/inventory/prometheus /tmp/gunicorn
 
-        # Install debugpy and watchdog if needed
-        pip install --user --no-cache-dir debugpy watchdog
+        # Install debugpy for debugging support
+        pip install --user --no-cache-dir debugpy
 
         # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
         cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
@@ -932,7 +932,7 @@ dev:
           --worker-tmp-dir=/tmp/gunicorn \
           --log-file=- \
           --access-logfile=- \
-          --log-level debug \
+          --log-level info \
           -c /tmp/gunicorn_debug.conf.py \
           -b 0.0.0.0:8000 \
           -t 60 \
