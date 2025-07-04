@@ -98,3 +98,4 @@ Thumbs.db
 deploy/
 
 okteto/okteto.yaml
+okteto-logs/

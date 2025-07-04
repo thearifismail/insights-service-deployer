@@ -5,6 +5,7 @@ set -e
 
 # Configuration - can be overridden by environment variables
 CLOWDAPP_NAME="${CLOWDAPP_NAME:-host-inventory}"
+DAEMON_LOG_DIR="./okteto-logs"
 
 # Colors for output
 GREEN='\033[0;32m'
@@ -111,7 +112,11 @@ show_status() {
         fi
         total_count=$((total_count + 1))
         if oc get deployment "${service}-okteto" >/dev/null 2>&1; then
-            echo "  🚀 $service (development)" >&2
+            if is_daemon_mode "$service"; then
+                echo "  🚀 $service (development - daemon mode)" >&2
+            else
+                echo "  🚀 $service (development)" >&2
+            fi
             active_count=$((active_count + 1))
         else
             echo "  📦 $service (deployed)" >&2
@@ -128,10 +133,100 @@ show_status() {
     fi
 }
 
+# Daemon mode management functions
+get_daemon_log_file() {
+    local service="$1"
+    local namespace=$(oc project -q 2>/dev/null || echo "unknown")
+    echo "${DAEMON_LOG_DIR}/${namespace}-${service}.log"
+}
+
+is_daemon_mode() {
+    local service="$1"
+    local log_file=$(get_daemon_log_file "$service")
+    [[ -f "$log_file" ]]
+}
+
+cleanup_daemon_files() {
+    local service="$1"
+    local log_file=$(get_daemon_log_file "$service")
+    rm -f "$log_file"
+}
+
+cleanup_all_daemon_artifacts() {
+    # Clean up all local daemon artifacts (log files only)
+    if [[ -d "$DAEMON_LOG_DIR" ]]; then
+        log "Cleaning up daemon log files..."
+        rm -f "$DAEMON_LOG_DIR"/*.log
+        # Remove directory if empty
+        rmdir "$DAEMON_LOG_DIR" 2>/dev/null || true
+    fi
+}
+
+wait_for_rollout() {
+    local service="$1"
+    log "Waiting for $service rollout to complete..."
+    
+    # Wait for the okteto deployment to be created first
+    local timeout=60
+    local count=0
+    while ! oc get deployment "${service}-okteto" >/dev/null 2>&1; do
+        if [[ $count -ge $timeout ]]; then
+            error "Timeout waiting for ${service}-okteto deployment to be created"
+            return 1
+        fi
+        sleep 1
+        ((count++))
+    done
+    
+    # Now wait for the rollout to complete
+    if oc rollout status deployment/"${service}-okteto" --timeout=300s >/dev/null 2>&1; then
+        log "✅ $service deployment ready"
+        return 0
+    else
+        error "❌ $service deployment failed or timed out"
+        return 1
+    fi
+}
+
+
+
 # Main okteto commands
 okteto_up() {
-    # Accept zero or one service argument only
-    local service="$1"
+    local daemon_mode=false
+    local wait_rollout=false
+    local service=""
+    
+    # Parse flags and arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -d)
+                daemon_mode=true
+                shift
+                ;;
+            -w)
+                wait_rollout=true
+                shift
+                ;;
+            -*)
+                error "Unknown flag: $1"
+                exit 1
+                ;;
+            *)
+                if [[ -n "$service" ]]; then
+                    error "Multiple services specified: $service and $1"
+                    exit 1
+                fi
+                service="$1"
+                shift
+                ;;
+        esac
+    done
+    
+    # Validate -w flag usage
+    if [[ "$wait_rollout" == "true" && "$daemon_mode" != "true" ]]; then
+        error "Flag -w can only be used with -d (daemon mode)"
+        exit 1
+    fi
     
     if [[ -n "$service" ]]; then
         # Validate the service exists in our list
@@ -141,7 +236,11 @@ okteto_up() {
             exit 1
         fi
         
-        log "Starting development for service: $service"
+        if [[ "$daemon_mode" == "true" ]]; then
+            log "Starting development for service: $service (daemon mode)"
+        else
+            log "Starting development for service: $service"
+        fi
         
         # Check if this specific service is already active
         if oc get deployment "${service}-okteto" >/dev/null 2>&1; then
@@ -149,6 +248,11 @@ okteto_up() {
             return 0
         fi
     else
+        if [[ "$daemon_mode" == "true" ]]; then
+            error "Daemon mode (-d) requires a specific service name"
+            error "Interactive service selection is not supported in daemon mode"
+            exit 1
+        fi
         log "Starting okteto (interactive service selection)"
     fi
     
@@ -158,6 +262,11 @@ okteto_up() {
         disable_clowdapp
     else
         log "ClowdApp reconciliation already disabled"
+    fi
+    
+    # Customize deployment for service if necessary (should NOT be necessary)
+    if [[ -n "$service" ]]; then
+        scripts/customize_deployments.sh "$service" up
     fi
     
     # Update okteto.yaml with current namespace SCC settings and image info
@@ -183,14 +292,91 @@ okteto_up() {
     
     # Set the repo path for okteto
     export INSIGHTS_HOST_INVENTORY_REPO_PATH
-    if [[ -n "$service" ]]; then
-        okteto up --file okteto/okteto.yaml --namespace "$(oc project -q)" "$service"
+    
+    if [[ "$daemon_mode" == "true" ]]; then
+        # Daemon mode: run in background with output redirected to local log file
+        mkdir -p "$DAEMON_LOG_DIR"
+        local log_file=$(get_daemon_log_file "$service")
+        
+        log "Starting $service in daemon mode, logs: $log_file"
+        
+        (
+            okteto up --file okteto/okteto.yaml --namespace "$namespace" "$service" 2>&1
+        ) > "$log_file" 2>&1 &
+        
+        if [[ "$wait_rollout" == "true" ]]; then
+            # Wait for the deployment to be ready
+            if wait_for_rollout "$service"; then
+                log "🚀 $service is ready in daemon mode"
+            else
+                error "❌ $service failed to become ready"
+                # Clean up local artifacts on failure
+                cleanup_daemon_files "$service"
+                return 1
+            fi
+        else
+            log "🚀 $service started in daemon mode"
+            log "💡 Use '$0 logs $service' to view logs"
+            log "💡 Use '$0 up $service -d -w' to wait for rollout completion"
+        fi
     else
-        okteto up --file okteto/okteto.yaml --namespace "$(oc project -q)"
+        # Normal mode: run in foreground
+        if [[ -n "$service" ]]; then
+            okteto up --file okteto/okteto.yaml --namespace "$namespace" "$service"
+        else
+            okteto up --file okteto/okteto.yaml --namespace "$namespace"
+        fi
     fi
 }
 
 okteto_down() {
+    local service="$1"  # Optional service parameter
+    
+    if [[ -n "$service" ]]; then
+        # Validate the service exists in our list
+        if [[ ! " ${DEFAULT_SERVICES[*]} " =~ " ${service} " ]]; then
+            error "Invalid service: $service"
+            error "Available services: ${DEFAULT_SERVICES[*]}"
+            exit 1
+        fi
+        
+        # Check if this specific service is active
+        if ! oc get deployment "${service}-okteto" >/dev/null 2>&1; then
+            log "Service $service not in development mode (idempotent)"
+            return 0
+        fi
+        
+        log "Stopping development for service: $service"
+        
+        # Use existing okteto.yaml if available, otherwise create temporary one
+        local created_temp_yaml=false
+        if [[ ! -f "okteto/okteto.yaml" ]]; then
+            cp okteto/okteto.template.yaml okteto/okteto.yaml
+            # Use dummy values - actual values don't matter for cleanup operations
+            sed -i.tmp "s/\${OKTETO_USER_ID}/1000000000/g; s/\${OKTETO_GROUP_ID}/1000000000/g; s/\${OKTETO_FS_GROUP_ID}/1000000000/g; s|\${OKTETO_IMAGE}|quay.io/cloudservices/insights-inventory|g; s/\${OKTETO_TAG}/latest/g" okteto/okteto.yaml
+            rm -f okteto/okteto.yaml.tmp
+            created_temp_yaml=true
+        fi
+        
+        okteto down --file okteto/okteto.yaml --namespace "$(oc project -q)" "$service"
+        
+        # Clean up temporary okteto.yaml if we created it
+        if [[ "$created_temp_yaml" == "true" ]]; then
+            rm -f okteto/okteto.yaml
+        fi
+        
+        # Clean up daemon artifacts for this service
+        cleanup_daemon_files "$service"
+        
+        # Revert any deployment customizations for this service
+        scripts/customize_deployments.sh "$service" down
+        
+        log "Service $service development stopped"
+        # Note: Don't re-enable ClowdApp for individual service down
+        return 0
+    fi
+    
+    # Full down - handle all services
     local status=$(check_dev_status "${DEFAULT_SERVICES[@]}")
     local active=$(echo "$status" | cut -d'|' -f1)
     
@@ -201,6 +387,8 @@ okteto_down() {
         if [[ "$clowdapp_disabled" == "true" ]]; then
             enable_clowdapp
         fi
+        # Clean up any leftover daemon artifacts even if no active containers
+        cleanup_all_daemon_artifacts
         return 0
     fi
     
@@ -231,6 +419,10 @@ okteto_down() {
         log "Cleaning up temporary okteto.yaml"
         rm -f okteto/okteto.yaml
     fi
+    
+    # Clean up local daemon artifacts after okteto down succeeds
+    # The background okteto processes should have terminated naturally
+    cleanup_all_daemon_artifacts
     
     # Re-enable ClowdApp reconciliation after stopping development
     local clowdapp_disabled=$(check_clowdapp_status)
@@ -269,9 +461,38 @@ okteto_exec() {
     fi
 }
 
+okteto_logs() {
+    [[ -z "$1" ]] && { error "Service name required for logs command"; exit 1; }
+    local service="$1"
+    
+    # Validate the service exists in our list
+    if [[ ! " ${DEFAULT_SERVICES[*]} " =~ " ${service} " ]]; then
+        error "Invalid service: $service"
+        error "Available services: ${DEFAULT_SERVICES[*]}"
+        exit 1
+    fi
+    
+    local log_file=$(get_daemon_log_file "$service")
+    
+    # Check if the log file exists
+    if [[ ! -f "$log_file" ]]; then
+        error "No daemon log file found for service: $service"
+        error "Service may not be running in daemon mode"
+        error "Expected log file: $log_file"
+        error "Start the service with: $0 up -d $service"
+        exit 1
+    fi
+    
+    log "Tailing logs for $service (Ctrl+C to exit)"
+    log "Log file: $log_file"
+    
+    # Tail the local log file
+    tail -f "$log_file"
+}
+
 show_help() {
     cat >&2 << EOF
-Usage: okteto-dev.sh {up|down|check|exec} [service]
+Usage: okteto-dev.sh {up|down|check|exec|logs} [options] [service]
 
 Configuration:
   INSIGHTS_HOST_INVENTORY_REPO_PATH (required) - Path to your local insights-host-inventory repository
@@ -281,25 +502,37 @@ Configuration:
   Current: $CLOWDAPP_NAME
 
 Commands:
-  up [service]         - Start development for one service
-                        No service: interactive selection
-                        With service: start that specific service
-                        Automatically disables ClowdApp reconciliation
-  down                 - Stop all development containers  
-                        Automatically re-enables ClowdApp reconciliation
-  check [services...]  - Show development status including ClowdApp state
-  exec <service> [cmd] - Execute command in development container
+  up [options] [service] - Start development for one service
+                          No service: interactive selection
+                          With service: start that specific service
+                          Options:
+                            -d  Start in daemon mode (background)
+                            -w  Wait for rollout completion (requires -d)
+                          Automatically disables ClowdApp reconciliation
+  down [service]         - Stop development containers
+                          No service: stop all development containers & re-enable ClowdApp
+                          With service: stop that specific service only
+  check [services...]    - Show development status including ClowdApp state
+  exec <service> [cmd]   - Execute command in development container
+  logs <service>         - Tail logs for a service started in daemon mode
 
 Available Services:
   ${DEFAULT_SERVICES[*]}
 
 Examples:
-  INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/repo okteto-dev.sh up host-inventory-service-reads
-  okteto-dev.sh up host-inventory-service-reads          # Start specific service
-  okteto-dev.sh up                                       # Interactive service selection
+  okteto-dev.sh up host-inventory-service-reads          # Start in foreground
+  okteto-dev.sh up -d host-inventory-service-reads       # Start in daemon mode
+  okteto-dev.sh up -d -w host-inventory-service-reads    # Start in daemon mode and wait
+  okteto-dev.sh logs host-inventory-service-reads        # View daemon logs
   okteto-dev.sh check                                    # Show status
-  okteto-dev.sh exec host-inventory-service-reads        # Connect to container
+  okteto-dev.sh exec host-inventory-service-reads bash   # Connect to container
   okteto-dev.sh down                                     # Stop all development
+  okteto-dev.sh down host-inventory-service-reads        # Stop specific service only
+
+Daemon Mode:
+  Services started with -d run in the background and log to ${DAEMON_LOG_DIR}/
+  Use the 'logs' command to view okteto output from daemon mode services.
+  The -w flag waits for the Kubernetes rollout to complete before returning.
 
 ClowdApp Management:
   This script automatically manages ClowdApp reconciliation to ensure proper
@@ -356,10 +589,11 @@ main() {
     
     # Handle commands
     case "${1:-up}" in
-        up)     shift; okteto_up "$1" ;;
-        down)   okteto_down ;;
+        up)     shift; okteto_up "$@" ;;
+        down)   shift; okteto_down "$@" ;;
         check)  shift; show_status "$@" ;;
         exec)   shift; okteto_exec "$@" ;;
+        logs)   shift; okteto_logs "$@" ;;
         -h|--help|help) show_help ;;
         *) error "Unknown command: $1"; show_help; exit 1 ;;
     esac

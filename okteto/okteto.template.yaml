@@ -39,7 +39,8 @@ dev:
                     self.script_path
                 ]
                 print(f"🚀 Starting MQ service: {' '.join(cmd)}")
-                self.process = subprocess.Popen(cmd)
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
                 return self.process
                 
             def stop_service(self):
@@ -129,6 +130,9 @@ dev:
     forward:
       - 9000:9000  # Health check port
       - 9006:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=MQ_P1
@@ -188,7 +192,8 @@ dev:
                     self.script_path
                 ]
                 print(f"🚀 Starting MQ service: {' '.join(cmd)}")
-                self.process = subprocess.Popen(cmd)
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
                 return self.process
                 
             def stop_service(self):
@@ -278,6 +283,9 @@ dev:
     forward:
       - 9001:9000  # Health check port
       - 9007:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=MQ_PMIN
@@ -337,7 +345,8 @@ dev:
                     self.script_path
                 ]
                 print(f"🚀 Starting MQ service: {' '.join(cmd)}")
-                self.process = subprocess.Popen(cmd)
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
                 return self.process
                 
             def stop_service(self):
@@ -427,6 +436,9 @@ dev:
     forward:
       - 9002:9000  # Health check port
       - 9008:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=MQ_SP
@@ -486,7 +498,8 @@ dev:
                     self.script_path
                 ]
                 print(f"🚀 Starting MQ service: {' '.join(cmd)}")
-                self.process = subprocess.Popen(cmd)
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
                 return self.process
                 
             def stop_service(self):
@@ -576,6 +589,9 @@ dev:
     forward:
       - 9003:9000  # Health check port
       - 9009:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=MQ_WORKSPACES
@@ -703,6 +719,9 @@ dev:
     forward:
       - 8002:8000  # Reads service port
       - 9010:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=READS
@@ -823,6 +842,9 @@ dev:
     forward:
       - 8003:8000  # Secondary reads service port
       - 9011:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=SECONDARY_READS
@@ -943,6 +965,9 @@ dev:
     forward:
       - 8004:8000  # Writes service port
       - 9012:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
     environment:
       - LOG_LEVEL=DEBUG
       - SERVICE_TYPE=WRITES
