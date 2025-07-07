@@ -500,6 +500,7 @@ okteto_logs() {
 
 okteto_group_up() {
     local wait_rollout=false
+    local use_all_services=false
     local services=()
     
     # Parse flags and arguments
@@ -507,6 +508,10 @@ okteto_group_up() {
         case $1 in
             -w)
                 wait_rollout=true
+                shift
+                ;;
+            --all)
+                use_all_services=true
                 shift
                 ;;
             -*)
@@ -520,21 +525,33 @@ okteto_group_up() {
         esac
     done
     
-    # Validate at least one service is provided
-    if [[ ${#services[@]} -eq 0 ]]; then
-        error "At least one service must be specified for group-up"
-        error "Available services: ${DEFAULT_SERVICES[*]}"
-        exit 1
-    fi
-    
-    # Validate all services exist in our list
-    for service in "${services[@]}"; do
-        if [[ ! " ${DEFAULT_SERVICES[*]} " =~ " ${service} " ]]; then
-            error "Invalid service: $service"
-            error "Available services: ${DEFAULT_SERVICES[*]}"
+    # Handle --all flag
+    if [[ "$use_all_services" == "true" ]]; then
+        if [[ ${#services[@]} -gt 0 ]]; then
+            error "Cannot specify both --all and individual services"
+            error "Use either: $0 group-up --all"
+            error "Or: $0 group-up <service1> <service2> ..."
             exit 1
         fi
-    done
+        services=("${DEFAULT_SERVICES[@]}")
+    else
+        # Validate at least one service is provided when not using --all
+        if [[ ${#services[@]} -eq 0 ]]; then
+            error "At least one service must be specified for group-up"
+            error "Available services: ${DEFAULT_SERVICES[*]}"
+            error "Or use: $0 group-up --all"
+            exit 1
+        fi
+        
+        # Validate all services exist in our list
+        for service in "${services[@]}"; do
+            if [[ ! " ${DEFAULT_SERVICES[*]} " =~ " ${service} " ]]; then
+                error "Invalid service: $service"
+                error "Available services: ${DEFAULT_SERVICES[*]}"
+                exit 1
+            fi
+        done
+    fi
     
     # Track results
     local failed_services=()
@@ -618,7 +635,8 @@ Commands:
   group-up [options] <service1> <service2> ... - Start multiple services in daemon mode
                           All services run in background with no console output
                           Options:
-                            -w  Wait for all services to be ready before returning
+                            --all  Start all available services
+                            -w     Wait for all services to be ready before returning
                           Automatically disables ClowdApp reconciliation
   down [service]         - Stop development containers
                           No service: stop all development containers & re-enable ClowdApp
@@ -638,6 +656,8 @@ Examples:
                                                          # Start multiple services in background
   okteto-dev.sh group-up -w host-inventory-service-reads host-inventory-service-writes
                                                          # Start multiple services and wait
+  okteto-dev.sh group-up --all                          # Start all available services
+  okteto-dev.sh group-up --all -w                       # Start all services and wait
   okteto-dev.sh logs host-inventory-service-reads        # View daemon logs
   okteto-dev.sh check                                    # Show status
   okteto-dev.sh exec host-inventory-service-reads bash   # Connect to container
@@ -683,7 +703,7 @@ main() {
     
     # Debug: show loaded services (suppress for group-up to keep output quiet)
     if [[ "${1:-up}" != "group-up" ]]; then
-        log "Loaded ${#DEFAULT_SERVICES[@]} services from okteto.template.yaml: ${DEFAULT_SERVICES[*]}"
+        log "Found ${#DEFAULT_SERVICES[@]} services in okteto.template.yaml: ${DEFAULT_SERVICES[*]}"
     fi
     
     # Clean up any existing backup files from previous runs
