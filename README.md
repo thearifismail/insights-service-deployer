@@ -140,6 +140,19 @@ export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/your/insights-host-inventory
 
 # Stop development mode
 ./okteto-dev.sh down
+
+# Daemon mode - start service in background
+./okteto-dev.sh up -d host-inventory-service-reads
+
+# Daemon mode with wait - start in background and wait until ready
+./okteto-dev.sh up -d -w host-inventory-service-reads
+
+# Start multiple services - background mode, quiet output
+./okteto-dev.sh group-up host-inventory-service-reads host-inventory-service-writes
+./okteto-dev.sh group-up --all -w # Start all services in the okteto template and wait until ready
+
+# View logs from daemon mode services
+./okteto-dev.sh logs host-inventory-service-reads
 ```
 
 Development containers sync your local code changes and reload automatically (~13 seconds). You can either let okteto provide interactive service selection, or specify one service to start directly. The script handles ClowdApp reconciliation and deployment scaling automatically.
