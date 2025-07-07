@@ -332,6 +332,14 @@ okteto_up() {
 okteto_down() {
     local service="$1"  # Optional service parameter
     
+    # Validate that only one service argument is provided
+    if [[ $# -gt 1 ]]; then
+        error "Only one service can be specified for down command"
+        error "To stop all services, use: $0 down"
+        error "To stop a specific service, use: $0 down <service>"
+        exit 1
+    fi
+    
     if [[ -n "$service" ]]; then
         # Validate the service exists in our list
         if [[ ! " ${DEFAULT_SERVICES[*]} " =~ " ${service} " ]]; then
@@ -490,9 +498,107 @@ okteto_logs() {
     tail -f "$log_file"
 }
 
+okteto_group_up() {
+    local wait_rollout=false
+    local services=()
+    
+    # Parse flags and arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -w)
+                wait_rollout=true
+                shift
+                ;;
+            -*)
+                error "Unknown flag: $1"
+                exit 1
+                ;;
+            *)
+                services+=("$1")
+                shift
+                ;;
+        esac
+    done
+    
+    # Validate at least one service is provided
+    if [[ ${#services[@]} -eq 0 ]]; then
+        error "At least one service must be specified for group-up"
+        error "Available services: ${DEFAULT_SERVICES[*]}"
+        exit 1
+    fi
+    
+    # Validate all services exist in our list
+    for service in "${services[@]}"; do
+        if [[ ! " ${DEFAULT_SERVICES[*]} " =~ " ${service} " ]]; then
+            error "Invalid service: $service"
+            error "Available services: ${DEFAULT_SERVICES[*]}"
+            exit 1
+        fi
+    done
+    
+    # Track results
+    local failed_services=()
+    local started_services=()
+    local service_pids=()
+    local services_to_start=()
+    
+    # Collect services that need to be started
+    for service in "${services[@]}"; do
+        # Skip if already in development mode
+        if oc get deployment "${service}-okteto" >/dev/null 2>&1; then
+            continue
+        fi
+        services_to_start+=("$service")
+    done
+    
+    # Start all services in parallel
+    for service in "${services_to_start[@]}"; do
+        okteto_up -d "$service" >/dev/null 2>&1 &
+        service_pids+=("$!")
+    done
+    
+    # Wait for all services to complete and check their exit codes
+    for i in "${!service_pids[@]}"; do
+        local pid="${service_pids[$i]}"
+        local service="${services_to_start[$i]}"
+        
+        if wait "$pid"; then
+            started_services+=("$service")
+        else
+            failed_services+=("$service")
+        fi
+    done
+    
+    # Wait for rollout if requested
+    if [[ "$wait_rollout" == "true" && ${#started_services[@]} -gt 0 ]]; then
+        local timeout_services=()
+        
+        for service in "${started_services[@]}"; do
+            if ! wait_for_rollout "$service" 2>/dev/null; then
+                timeout_services+=("$service")
+                cleanup_daemon_files "$service"
+            fi
+        done
+        
+        if [[ ${#timeout_services[@]} -gt 0 ]]; then
+            echo "❌ Timed out services: ${timeout_services[*]}" >&2
+        fi
+        
+        # Exit with error if any service failed
+        if [[ ${#failed_services[@]} -gt 0 || ${#timeout_services[@]} -gt 0 ]]; then
+            exit 1
+        fi
+    else
+        # Exit with error if any service failed to start
+        if [[ ${#failed_services[@]} -gt 0 ]]; then
+            exit 1
+        fi
+    fi
+}
+
 show_help() {
     cat >&2 << EOF
-Usage: okteto-dev.sh {up|down|check|exec|logs} [options] [service]
+Usage: okteto-dev.sh {up|group-up|down|check|exec|logs} [options] [service]
 
 Configuration:
   INSIGHTS_HOST_INVENTORY_REPO_PATH (required) - Path to your local insights-host-inventory repository
@@ -509,6 +615,11 @@ Commands:
                             -d  Start in daemon mode (background)
                             -w  Wait for rollout completion (requires -d)
                           Automatically disables ClowdApp reconciliation
+  group-up [options] <service1> <service2> ... - Start multiple services in daemon mode
+                          All services run in background with no console output
+                          Options:
+                            -w  Wait for all services to be ready before returning
+                          Automatically disables ClowdApp reconciliation
   down [service]         - Stop development containers
                           No service: stop all development containers & re-enable ClowdApp
                           With service: stop that specific service only
@@ -523,6 +634,10 @@ Examples:
   okteto-dev.sh up host-inventory-service-reads          # Start in foreground
   okteto-dev.sh up -d host-inventory-service-reads       # Start in daemon mode
   okteto-dev.sh up -d -w host-inventory-service-reads    # Start in daemon mode and wait
+  okteto-dev.sh group-up host-inventory-service-reads host-inventory-service-writes
+                                                         # Start multiple services in background
+  okteto-dev.sh group-up -w host-inventory-service-reads host-inventory-service-writes
+                                                         # Start multiple services and wait
   okteto-dev.sh logs host-inventory-service-reads        # View daemon logs
   okteto-dev.sh check                                    # Show status
   okteto-dev.sh exec host-inventory-service-reads bash   # Connect to container
@@ -533,6 +648,11 @@ Daemon Mode:
   Services started with -d run in the background and log to ${DAEMON_LOG_DIR}/
   Use the 'logs' command to view okteto output from daemon mode services.
   The -w flag waits for the Kubernetes rollout to complete before returning.
+
+Group Mode:
+  The group-up command starts multiple services simultaneously in daemon mode.
+  All services run in the background with output suppressed unless there's an error.
+  Use -w to wait for all services to be ready before the command returns.
 
 ClowdApp Management:
   This script automatically manages ClowdApp reconciliation to ensure proper
@@ -561,8 +681,10 @@ main() {
         exit 1
     fi
     
-    # Debug: show loaded services
-    log "Loaded ${#DEFAULT_SERVICES[@]} services from okteto.template.yaml: ${DEFAULT_SERVICES[*]}"
+    # Debug: show loaded services (suppress for group-up to keep output quiet)
+    if [[ "${1:-up}" != "group-up" ]]; then
+        log "Loaded ${#DEFAULT_SERVICES[@]} services from okteto.template.yaml: ${DEFAULT_SERVICES[*]}"
+    fi
     
     # Clean up any existing backup files from previous runs
     rm -f okteto/okteto.yaml.bak okteto/okteto.yaml-e okteto/okteto.yaml.tmp
@@ -589,11 +711,12 @@ main() {
     
     # Handle commands
     case "${1:-up}" in
-        up)     shift; okteto_up "$@" ;;
-        down)   shift; okteto_down "$@" ;;
-        check)  shift; show_status "$@" ;;
-        exec)   shift; okteto_exec "$@" ;;
-        logs)   shift; okteto_logs "$@" ;;
+        up)       shift; okteto_up "$@" ;;
+        group-up) shift; okteto_group_up "$@" ;;
+        down)     shift; okteto_down "$@" ;;
+        check)    shift; show_status "$@" ;;
+        exec)     shift; okteto_exec "$@" ;;
+        logs)     shift; okteto_logs "$@" ;;
         -h|--help|help) show_help ;;
         *) error "Unknown command: $1"; show_help; exit 1 ;;
     esac
