@@ -111,11 +111,23 @@ show_status() {
             continue
         fi
         total_count=$((total_count + 1))
-        if oc get deployment "${service}-okteto" >/dev/null 2>&1; then
-            if is_daemon_mode "$service"; then
-                echo "  🚀 $service (development - daemon mode)" >&2
+        local deployment_status=$(oc get deployment "${service}-okteto" --no-headers 2>/dev/null | awk '{print $2}' || echo "")
+        if [[ -n "$deployment_status" ]]; then
+            # Parse ready/desired replicas (e.g., "1/1" or "0/1")
+            local ready=$(echo "$deployment_status" | cut -d'/' -f1)
+            local desired=$(echo "$deployment_status" | cut -d'/' -f2)
+            local status_indicator=""
+            
+            if [[ "$ready" == "$desired" && "$ready" != "0" ]]; then
+                status_indicator="✅"
             else
-                echo "  🚀 $service (development)" >&2
+                status_indicator="⏳"
+            fi
+            
+            if is_daemon_mode "$service"; then
+                echo "  🚀 $service (development - daemon mode) $status_indicator" >&2
+            else
+                echo "  🚀 $service (development) $status_indicator" >&2
             fi
             active_count=$((active_count + 1))
         else
