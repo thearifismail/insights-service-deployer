@@ -7,13 +7,13 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 # Check if bonfire is installed
-if ! command -v bonfire >/dev/null 2>&1; then
+if ! command -v ~/bonfire_venv/bin/bonfire >/dev/null 2>&1; then
   echo "Error: crc-bonfire is not installed. Please install crc-bonfire to continue." >&2
   exit 1
 fi
 
 # Getting all Keycloak vars from `bonfire namespace describe` result
-json_output=$(bonfire namespace describe -o json)
+json_output=$(~/bonfire_venv/bin/bonfire namespace describe -o json)
 
 # Export environment variables from keys containing "keycloak_admin"
 eval $(echo "$json_output" | jq -r '
