@@ -1,0 +1,982 @@
+# Multiple development containers for different host-inventory services
+dev:
+  # MQ Priority 1 Service
+  host-inventory-mq-p1:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
+
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 9000:9000  # Health check port
+      - 9006:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_P1
+      - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=platform.inventory.host-ingress-p1
+      - KAFKA_HOST_INGRESS_TOPIC=platform.inventory.host-ingress-p1
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # MQ Priority Min Service
+  host-inventory-mq-pmin:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
+
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 9001:9000  # Health check port
+      - 9007:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_PMIN
+      - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=platform.inventory.host-ingress
+      - KAFKA_HOST_INGRESS_TOPIC=platform.inventory.host-ingress
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # MQ System Profile Service
+  host-inventory-mq-sp:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
+
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 9002:9000  # Health check port
+      - 9008:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_SP
+      - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_TOPIC=platform.inventory.host-ingress
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # MQ Workspaces Service
+  host-inventory-mq-workspaces:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        # Install debugpy and watchdog for auto-reload
+        pip install --user --no-cache-dir debugpy watchdog
+
+        # Create Python auto-reloader script
+        cat > /tmp/mq_auto_reloader.py << 'EOF'
+        import os
+        import sys
+        import signal
+        import subprocess
+        import time
+        from pathlib import Path
+        from watchdog.observers import Observer
+        from watchdog.events import FileSystemEventHandler
+
+        class MQServiceReloader(FileSystemEventHandler):
+            def __init__(self, script_path):
+                self.script_path = script_path
+                self.process = None
+                self.restart_scheduled = False
+                
+            def start_service(self):
+                """Start the MQ service with debugpy"""
+                cmd = [
+                    sys.executable, "-m", "debugpy", 
+                    "--listen", "0.0.0.0:9229", 
+                    self.script_path
+                ]
+                print(f"🚀 Starting MQ service: {' '.join(cmd)}")
+                # Forward subprocess output to parent's stdout/stderr
+                self.process = subprocess.Popen(cmd, stdout=sys.stdout, stderr=sys.stderr)
+                return self.process
+                
+            def stop_service(self):
+                """Stop the current MQ service"""
+                if self.process and self.process.poll() is None:
+                    print("🛑 Stopping MQ service...")
+                    self.process.terminate()
+                    try:
+                        self.process.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        print("⚠️  Force killing MQ service...")
+                        self.process.kill()
+                        self.process.wait()
+                    self.process = None
+                    
+            def restart_service(self):
+                """Restart the MQ service"""
+                if self.restart_scheduled:
+                    return
+                    
+                self.restart_scheduled = True
+                print("🔄 File change detected, restarting MQ service...")
+                
+                # Small delay to batch multiple rapid changes
+                time.sleep(0.5)
+                
+                self.stop_service()
+                time.sleep(0.2)  # Brief pause before restart
+                self.start_service()
+                self.restart_scheduled = False
+                
+            def on_modified(self, event):
+                """Handle file modification events"""
+                if event.is_directory:
+                    return
+                    
+                # Only restart for Python files
+                if event.src_path.endswith('.py'):
+                    print(f"📝 File changed: {event.src_path}")
+                    self.restart_service()
+                    
+            def on_created(self, event):
+                """Handle file creation events"""
+                if not event.is_directory and event.src_path.endswith('.py'):
+                    print(f"📄 New file: {event.src_path}")
+                    self.restart_service()
+
+        def main():
+            script_path = sys.argv[1] if len(sys.argv) > 1 else './inv_mq_service.py'
+            
+            reloader = MQServiceReloader(script_path)
+            
+            # Start initial service
+            reloader.start_service()
+            
+            # Set up file watcher
+            observer = Observer()
+            observer.schedule(reloader, path='.', recursive=True)
+            observer.start()
+            
+            print(f"👀 Watching for changes in {os.getcwd()}")
+            print("🐛 Debugpy listening on port 9229")
+            print("💡 Press Ctrl+C to stop")
+            
+            try:
+                while True:
+                    if reloader.process and reloader.process.poll() is not None:
+                        print("💥 MQ service crashed, restarting...")
+                        reloader.start_service()
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                print("\n👋 Shutting down...")
+                observer.stop()
+                reloader.stop_service()
+                
+            observer.join()
+
+        if __name__ == "__main__":
+            main()
+        EOF
+
+        # Run the auto-reloader
+        exec python /tmp/mq_auto_reloader.py ./inv_mq_service.py
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 9003:9000  # Health check port
+      - 9009:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=MQ_WORKSPACES
+      - CLOWDER_ENABLED=true
+      - KAFKA_CONSUMER_TOPIC=outbox.event.workspace
+      - KAFKA_WORKSPACES_TOPIC=outbox.event.workspace
+      - KAFKA_EVENT_TOPIC=platform.inventory.events
+      - KAFKA_NOTIFICATION_TOPIC=platform.notifications.ingress
+      - KAFKA_SYSTEM_PROFILE_TOPIC=platform.inventory.system-profile
+      - KAFKA_HOST_INGRESS_GROUP=inventory-mq
+      - PAYLOAD_TRACKER_SERVICE_NAME=inventory-mq-service
+      - PAYLOAD_TRACKER_ENABLED=true
+      - CONSUMER_MQ_BROKER=
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # Read-only Service  
+  host-inventory-service-reads:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        mkdir -p /tmp/inventory/prometheus /tmp/gunicorn
+
+        # Install debugpy for debugging support
+        pip install --user --no-cache-dir debugpy
+
+        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
+        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
+        cat >> /tmp/gunicorn_debug.conf.py << 'EOF'
+
+        # === Okteto Debug Extension ===
+        import debugpy
+
+        # Preserve original post_worker_init if it exists
+        try:
+            _original_post_worker_init = post_worker_init
+        except NameError:
+            _original_post_worker_init = None
+
+        def post_worker_init(worker):
+            """Extended post_worker_init with debugpy support."""
+            # Call original hook first if it exists
+            if _original_post_worker_init:
+                _original_post_worker_init(worker)
+            # Add debugpy initialization
+            try:
+                debugpy.listen(("0.0.0.0", 9229))
+                print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)
+            except Exception as e:
+                print("❌ Failed to start debugpy: %s" % e)
+        EOF
+
+        # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
+        cat > /tmp/restartable_uvicorn_worker.py << 'EOF'
+        import os
+        import signal
+        import threading
+        import time
+        from uvicorn.workers import UvicornWorker
+
+        class ReloaderThread(threading.Thread):
+            def __init__(self, worker, sleep_interval=1.0):
+                super().__init__()
+                self.setDaemon(True)
+                self._worker = worker
+                self._interval = sleep_interval
+
+            def run(self):
+                while True:
+                    if not self._worker.alive:
+                        # Send SIGHUP to master process for graceful worker reload
+                        # This should be faster than SIGINT to entire process
+                        master_pid = os.getppid()
+                        os.kill(master_pid, signal.SIGHUP)
+                        break  # Exit the monitoring loop after signaling reload
+                        # Alternative: restart entire process (slower but more thorough)
+                        # os.kill(os.getpid(), signal.SIGINT)
+                    time.sleep(self._interval)
+
+        class RestartableUvicornWorker(UvicornWorker):
+            CONFIG_KWARGS = {"loop": "uvloop", "http": "httptools"}
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._reloader_thread = ReloaderThread(self)
+
+            def run(self):
+                if self.cfg.reload:
+                    self._reloader_thread.start()
+                super().run()
+        EOF
+
+        # Add /tmp to Python path so our custom worker can be imported
+        export PYTHONPATH=/tmp:$PYTHONPATH
+
+        # Run gunicorn with RestartableUvicornWorker (fixes reload issue #2339)
+        exec gunicorn run:app \
+          --reload \
+          --workers=1 \
+          --threads=8 \
+          --limit-request-field_size=16380 \
+          --limit-request-line=8190 \
+          --worker-tmp-dir=/tmp/gunicorn \
+          --log-file=- \
+          --access-logfile=- \
+          --log-level info \
+          -c /tmp/gunicorn_debug.conf.py \
+          -b 0.0.0.0:8000 \
+          -t 60 \
+          --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 8002:8000  # Reads service port
+      - 9010:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=READS
+      - CLOWDER_ENABLED=true
+      - INVENTORY_API_USE_READREPLICA=true
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/inventory/prometheus
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # Secondary Read Service
+  host-inventory-service-secondary-reads:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        mkdir -p /tmp/inventory/prometheus /tmp/gunicorn
+
+        # Install debugpy for debugging support
+        pip install --user --no-cache-dir debugpy
+
+        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
+        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
+        cat >> /tmp/gunicorn_debug.conf.py << 'EOF'
+
+        # === Okteto Debug Extension ===
+        import debugpy
+
+        # Preserve original post_worker_init if it exists
+        try:
+            _original_post_worker_init = post_worker_init
+        except NameError:
+            _original_post_worker_init = None
+
+        def post_worker_init(worker):
+            """Extended post_worker_init with debugpy support."""
+            # Call original hook first if it exists
+            if _original_post_worker_init:
+                _original_post_worker_init(worker)
+            # Add debugpy initialization
+            try:
+                debugpy.listen(("0.0.0.0", 9229))
+                print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)
+            except Exception as e:
+                print("❌ Failed to start debugpy: %s" % e)
+        EOF
+
+        # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
+        cat > /tmp/restartable_uvicorn_worker.py << 'EOF'
+        import os
+        import signal
+        import threading
+        import time
+        from uvicorn.workers import UvicornWorker
+
+        class ReloaderThread(threading.Thread):
+            def __init__(self, worker, sleep_interval=1.0):
+                super().__init__()
+                self.setDaemon(True)
+                self._worker = worker
+                self._interval = sleep_interval
+
+            def run(self):
+                while True:
+                    if not self._worker.alive:
+                        # Send SIGHUP to master process for graceful worker reload
+                        # This should be faster than SIGINT to entire process
+                        master_pid = os.getppid()
+                        os.kill(master_pid, signal.SIGHUP)
+                        break  # Exit the monitoring loop after signaling reload
+                        # Alternative: restart entire process (slower but more thorough)
+                        # os.kill(os.getpid(), signal.SIGINT)
+                    time.sleep(self._interval)
+
+        class RestartableUvicornWorker(UvicornWorker):
+            CONFIG_KWARGS = {"loop": "uvloop", "http": "httptools"}
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._reloader_thread = ReloaderThread(self)
+
+            def run(self):
+                if self.cfg.reload:
+                    self._reloader_thread.start()
+                super().run()
+        EOF
+
+        # Add /tmp to Python path so our custom worker can be imported
+        export PYTHONPATH=/tmp:$PYTHONPATH
+
+        # Run gunicorn with RestartableUvicornWorker (fixes reload issue #2339)
+        exec gunicorn run:app \
+          --reload \
+          --workers=1 \
+          --threads=8 \
+          --limit-request-field_size=16380 \
+          --limit-request-line=8190 \
+          --worker-tmp-dir=/tmp/gunicorn \
+          --log-file=- \
+          --access-logfile=- \
+          --log-level info \
+          -c /tmp/gunicorn_debug.conf.py \
+          -b 0.0.0.0:8000 \
+          -t 60 \
+          --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 8003:8000  # Secondary reads service port
+      - 9011:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=SECONDARY_READS
+      - CLOWDER_ENABLED=true
+      - INVENTORY_API_USE_READREPLICA=true
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/inventory/prometheus
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true
+
+  # Write Service
+  host-inventory-service-writes:
+    image: ${OKTETO_IMAGE}:${OKTETO_TAG}
+    command: 
+      - "bash"
+      - "-c"
+      - |
+        export HOME=/tmp
+        export PATH=$HOME/.local/bin:$PATH
+        export PYTHONPATH=$HOME/.local/lib/python3.9/site-packages:$PYTHONPATH
+
+        mkdir -p /tmp/inventory/prometheus /tmp/gunicorn
+
+        # Install debugpy for debugging support
+        pip install --user --no-cache-dir debugpy
+
+        # Extend existing gunicorn.conf.py with debugpy hook (preserving original config)
+        cp gunicorn.conf.py /tmp/gunicorn_debug.conf.py
+        cat >> /tmp/gunicorn_debug.conf.py << 'EOF'
+
+        # === Okteto Debug Extension ===
+        import debugpy
+
+        # Preserve original post_worker_init if it exists
+        try:
+            _original_post_worker_init = post_worker_init
+        except NameError:
+            _original_post_worker_init = None
+
+        def post_worker_init(worker):
+            """Extended post_worker_init with debugpy support."""
+            # Call original hook first if it exists
+            if _original_post_worker_init:
+                _original_post_worker_init(worker)
+            # Add debugpy initialization
+            try:
+                debugpy.listen(("0.0.0.0", 9229))
+                print("✅ Debugpy listening on port 9229 (worker PID: %s)" % worker.pid)
+            except Exception as e:
+                print("❌ Failed to start debugpy: %s" % e)
+        EOF
+
+        # Create RestartableUvicornWorker to fix gunicorn reload issue #2339
+        cat > /tmp/restartable_uvicorn_worker.py << 'EOF'
+        import os
+        import signal
+        import threading
+        import time
+        from uvicorn.workers import UvicornWorker
+
+        class ReloaderThread(threading.Thread):
+            def __init__(self, worker, sleep_interval=1.0):
+                super().__init__()
+                self.setDaemon(True)
+                self._worker = worker
+                self._interval = sleep_interval
+
+            def run(self):
+                while True:
+                    if not self._worker.alive:
+                        # Send SIGHUP to master process for graceful worker reload
+                        # This should be faster than SIGINT to entire process
+                        master_pid = os.getppid()
+                        os.kill(master_pid, signal.SIGHUP)
+                        break  # Exit the monitoring loop after signaling reload
+                        # Alternative: restart entire process (slower but more thorough)
+                        # os.kill(os.getpid(), signal.SIGINT)
+                    time.sleep(self._interval)
+
+        class RestartableUvicornWorker(UvicornWorker):
+            CONFIG_KWARGS = {"loop": "uvloop", "http": "httptools"}
+
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+                self._reloader_thread = ReloaderThread(self)
+
+            def run(self):
+                if self.cfg.reload:
+                    self._reloader_thread.start()
+                super().run()
+        EOF
+
+        # Add /tmp to Python path so our custom worker can be imported
+        export PYTHONPATH=/tmp:$PYTHONPATH
+
+        # Run gunicorn with RestartableUvicornWorker (fixes reload issue #2339)
+        exec gunicorn run:app \
+          --reload \
+          --workers=1 \
+          --threads=8 \
+          --limit-request-field_size=16380 \
+          --limit-request-line=8190 \
+          --worker-tmp-dir=/tmp/gunicorn \
+          --log-file=- \
+          --access-logfile=- \
+          --log-level info \
+          -c /tmp/gunicorn_debug.conf.py \
+          -b 0.0.0.0:8000 \
+          -t 60 \
+          --worker-class=restartable_uvicorn_worker.RestartableUvicornWorker
+    workdir: /opt/app-root/src
+    sync:
+      - ${INSIGHTS_HOST_INVENTORY_REPO_PATH:-/Users/mmclaugh/go/src/github.com/RedHatInsights/insights-host-inventory}:/opt/app-root/src
+    forward:
+      - 8004:8000  # Writes service port
+      - 9012:9229  # Debug port
+    probes:
+      liveness: true
+      readiness: true
+    environment:
+      - LOG_LEVEL=DEBUG
+      - SERVICE_TYPE=WRITES
+      - CLOWDER_ENABLED=true
+      - PROMETHEUS_MULTIPROC_DIR=/tmp/inventory/prometheus
+    volumes:
+      - /var/run/secrets
+    securityContext:
+      runAsUser: ${OKTETO_USER_ID}
+      runAsGroup: ${OKTETO_GROUP_ID}
+      fsGroup: ${OKTETO_FS_GROUP_ID}
+      runAsNonRoot: true

@@ -1,0 +1,209 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "🔍 Debug: MQ Priority 1",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9006
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Message Queue Services",
+          "order": 1
+        }
+      },
+      {
+        "name": "🔍 Debug: MQ Priority Min",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9007
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Message Queue Services",
+          "order": 2
+        }
+      },
+      {
+        "name": "🔍 Debug: MQ System Profile",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9008
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Message Queue Services",
+          "order": 3
+        }
+      },
+      {
+        "name": "🔍 Debug: MQ Workspaces",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9009
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "Message Queue Services",
+          "order": 4
+        }
+      },
+      {
+        "name": "🔍 Debug: API Reads",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9010
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "API Services",
+          "order": 1
+        }
+      },
+      {
+        "name": "🔍 Debug: API Secondary Reads",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9011
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "API Services",
+          "order": 2
+        }
+      },
+      {
+        "name": "🔍 Debug: API Writes",
+        "type": "debugpy",
+        "request": "attach",
+        "connect": {
+          "host": "localhost",
+          "port": 9012
+        },
+        "pathMappings": [
+          {
+            "localRoot": "${workspaceFolder}",
+            "remoteRoot": "/opt/app-root/src"
+          }
+        ],
+        "justMyCode": false,
+        "django": false,
+        "subProcess": true,
+        "console": "integratedTerminal",
+        "presentation": {
+          "group": "API Services",
+          "order": 3
+        }
+      }
+    ],
+    "compounds": [
+      {
+        "name": "🔍 Debug: All Message Queue Services",
+        "configurations": [
+          "🔍 Debug: MQ Priority 1",
+          "🔍 Debug: MQ Priority Min",
+          "🔍 Debug: MQ System Profile",
+          "🔍 Debug: MQ Workspaces"
+        ],
+        "presentation": {
+          "group": "Message Queue Services",
+          "order": 5
+        }
+      },
+      {
+        "name": "🔍 Debug: All API Services",
+        "configurations": [
+          "🔍 Debug: API Reads",
+          "🔍 Debug: API Secondary Reads",
+          "🔍 Debug: API Writes"
+        ],
+        "presentation": {
+          "group": "API Services",
+          "order": 5
+        }
+      },
+      {
+        "name": "🔍 Debug: All Host Inventory Services",
+        "configurations": [
+          "🔍 Debug: MQ Priority 1",
+          "🔍 Debug: MQ Priority Min",
+          "🔍 Debug: MQ System Profile",
+          "🔍 Debug: MQ Workspaces",
+          "🔍 Debug: API Reads",
+          "🔍 Debug: API Secondary Reads",
+          "🔍 Debug: API Writes"
+        ],
+        "presentation": {
+          "group": "All Services",
+          "order": 1
+        }
+      }
+    ]
+  }

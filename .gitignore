@@ -97,3 +97,5 @@ Thumbs.db
 # Insights service deployer
 deploy/
 
+okteto/okteto.yaml
+okteto-logs/

@@ -110,3 +110,116 @@ Log in to Unleash at `localhost:4242` with the creds:
   -   pass: unleash4all
 e.g. check that the `hbi.api.kessel-workspace-migration` in Unleash is on.
 ```
+
+## Local Development Environment
+
+After deployment, you can develop services locally using Okteto for fast code-reload cycles:
+
+### Prerequisites
+- [Okteto CLI](https://www.okteto.com/docs/get-started/install-okteto-cli/) installed
+- Local clone of [insights-host-inventory](https://github.com/RedHatInsights/insights-host-inventory)
+
+### Setup
+**Important**: You must set the `INSIGHTS_HOST_INVENTORY_REPO_PATH` environment variable to your local insights-host-inventory repository path before using the development environment.
+
+```bash
+# Set your local repo path (REQUIRED)
+export INSIGHTS_HOST_INVENTORY_REPO_PATH=/path/to/your/insights-host-inventory
+```
+
+### Usage
+```bash
+# Start development mode - interactive service selection
+./okteto-dev.sh up
+
+# Or start development mode for a specific service
+./okteto-dev.sh up host-inventory-service-reads
+
+# Check status
+./okteto-dev.sh check
+
+# Stop development mode
+./okteto-dev.sh down
+
+# Daemon mode - start service in background
+./okteto-dev.sh up -d host-inventory-service-reads
+
+# Daemon mode with wait - start in background and wait until ready
+./okteto-dev.sh up -d -w host-inventory-service-reads
+
+# Start multiple services - background mode, quiet output
+./okteto-dev.sh group-up host-inventory-service-reads host-inventory-service-writes
+./okteto-dev.sh group-up --all -w # Start all services in the okteto template and wait until ready
+
+# View logs from daemon mode services
+./okteto-dev.sh logs host-inventory-service-reads
+```
+
+Development containers sync your local code changes and reload automatically (~13 seconds). You can either let okteto provide interactive service selection, or specify one service to start directly. The script handles ClowdApp reconciliation and deployment scaling automatically.
+
+### Available Services
+
+The deployment includes 7 debuggable Python services:
+
+**Message Queue Services** (Process Kafka messages):
+- `host-inventory-mq-p1` - Priority 1 message processing
+- `host-inventory-mq-pmin` - Minimum priority message processing  
+- `host-inventory-mq-sp` - System profile message processing
+- `host-inventory-mq-workspaces` - Workspace message processing
+
+**API Services** (Handle HTTP requests):
+- `host-inventory-service-reads` - Read-only API operations
+- `host-inventory-service-secondary-reads` - Secondary read operations
+- `host-inventory-service-writes` - Write API operations
+
+### VS Code/Cursor Debugging Setup
+
+After starting development with `./okteto-dev.sh up [service]`, you can debug the Python services:
+
+1. Copy the debug configuration to your local insights-host-inventory repo:
+   ```bash
+   cp okteto/vscode/launch.json /path/to/insights-host-inventory/.vscode/
+   ```
+
+2. Open your insights-host-inventory repo in VS Code/Cursor
+
+3. Set breakpoints and start debugging using:
+   - **Individual services**: Select specific service (e.g., "🔍 Debug: MQ Priority 1", "🔍 Debug: API Reads")
+   - **Service groups**: "🔍 Debug: All Message Queue Services" or "🔍 Debug: All API Services"
+   - **All services**: "🔍 Debug: All Host Inventory Services"
+
+### Debug Port Mappings
+
+**Message Queue Services**:
+- Port 9006 → MQ Priority 1 (`host-inventory-mq-p1`)
+- Port 9007 → MQ Priority Min (`host-inventory-mq-pmin`)
+- Port 9008 → MQ System Profile (`host-inventory-mq-sp`)
+- Port 9009 → MQ Workspaces (`host-inventory-mq-workspaces`)
+
+**API Services**:
+- Port 9010 → API Reads (`host-inventory-service-reads`)
+- Port 9011 → API Secondary Reads (`host-inventory-service-secondary-reads`)
+- Port 9012 → API Writes (`host-inventory-service-writes`)
+
+**Health Check Ports** (MQ services only):
+- Port 9000 → MQ Priority 1 health
+- Port 9001 → MQ Priority Min health  
+- Port 9002 → MQ System Profile health
+- Port 9003 → MQ Workspaces health
+
+### Testing Your Setup
+
+For API services, you can test with curl commands like:
+```bash
+# Test API reads service 
+curl -H "x-rh-identity: eyJpZGVudGl0eSI6eyJhY2NvdW50X251bWJlciI6IjEyMzQ1IiwiaW50ZXJuYWwiOnsib3JnX2lkIjoiMTIzNDUifSwidHlwZSI6IlVzZXIiLCJ1c2VyIjp7InVzZXJfaWQiOiJzYXJhIiwiaXNfb3JnX2FkbWluIjp0cnVlfX19" \
+     localhost:8002/api/inventory/v1/hosts
+```
+
+For MQ services, set breakpoints in `inv_mq_service.py` and related message processing code.
+
+### Debugging Behavior
+
+**MQ Services**: Start immediately and accept debugger connections at any time. You can attach VS Code after the service is running - no waiting required.
+
+**Note**: Ensure the Python extension is installed in VS Code/Cursor for `debugpy` support.
