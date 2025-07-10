@@ -2,6 +2,9 @@
 
 set -e
 
+EPHEMERAL_TOKEN=$(oc whoami --show-token)
+EPHEMERAL_SERVER=$(oc whoami --show-server)
+
 login() {
   user="$(oc whoami < /dev/null)"
   [[ $? -eq 0 ]] && echo "Skipping login. Already logged in as user: $user" && return 0
