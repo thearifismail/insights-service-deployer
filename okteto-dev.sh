@@ -207,11 +207,26 @@ check_port_conflicts() {
         warn "⚠️  Port conflict check bypassed"
         return 0
     fi
+
+    log "🔎 Dynamically checking for port conflicts based on okteto.template.yaml..."
+
+    if [[ ! -f "okteto/okteto.template.yaml" ]]; then
+        warn "⚠️  okteto/okteto.template.yaml not found. Skipping dynamic port check."
+        return
+    fi
+
+    # Dynamically extract local ports from the forward section of the okteto template
+    local conflict_ports
+    conflict_ports=($(grep -E '^\s*-\s*[0-9]+:[0-9]+' okteto/okteto.template.yaml | sed -e 's/^\s*-\s*//' -e 's/:.*//' | sort -u))
+
+    if [[ ${#conflict_ports[@]} -eq 0 ]]; then
+        log "✅ No ports to check in okteto.template.yaml."
+        return
+    fi
     
-    # Check the most common ports okteto uses for SSH tunnels and forwarded services
-    local conflict_ports=(8080 8443 9229 5005 8000 3000 5432 6379 9090)
+    log "   Ports to check: ${conflict_ports[*]}"
+
     local ports_in_use=()
-    
     for port in "${conflict_ports[@]}"; do
         if command -v lsof >/dev/null 2>&1 && lsof -i ":$port" >/dev/null 2>&1; then
             ports_in_use+=("$port")
@@ -221,12 +236,13 @@ check_port_conflicts() {
             ports_in_use+=("$port")
         fi
     done
-    
+
     if [[ ${#ports_in_use[@]} -gt 0 ]]; then
         error "❌ Port conflicts detected that will cause okteto SSH tunnel failures:"
         for port in "${ports_in_use[@]}"; do
             if command -v lsof >/dev/null 2>&1; then
-                local process=$(lsof -i ":$port" 2>/dev/null | tail -1 | awk '{print $1, $2}')
+                local process
+                process=$(lsof -i ":$port" 2>/dev/null | tail -1 | awk '{print $1, $2}')
                 error "   Port $port is occupied by: $process"
             else
                 error "   Port $port is occupied"
@@ -238,6 +254,8 @@ check_port_conflicts() {
         error "   Or set: OKTETO_SKIP_PORT_CHECK=true (if you know what you're doing)"
         exit 1
     fi
+    
+    log "✅ No port conflicts detected."
 }
 
 # Ensure we're not running on production/stage clusters
