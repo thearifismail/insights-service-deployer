@@ -436,12 +436,6 @@ okteto_down() {
     
     log "All development containers cleaned up"
     
-    # Clean up deployment customizations for all services that were active
-    log "Cleaning up deployment customizations..."
-    for service in $active; do
-        scripts/customize_deployments.sh "$service" down
-    done
-    
     # Clean up temporary okteto.yaml if we created it
     if [[ "$created_temp_yaml" == "true" ]]; then
         log "Cleaning up temporary okteto.yaml"
