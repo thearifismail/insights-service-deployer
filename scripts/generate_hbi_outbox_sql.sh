@@ -10,7 +10,7 @@ ROWS=${1:-10}
 OUTPUT_FILE=${2:-"hbi_outbox_inserts.sql"}
 
 # Embedded JSON template (minimized)
-JSON_TEMPLATE='{"type":"host","reporter_type":"hbi","reporter_instance_id":"13235b49-3117-4e6c-a1d2-572567e57766","representations":{"metadata":{"local_resource_id":"{{host.id}}","api_href":"https://apiHref.com/","console_href":"https://www.console.com/","reporter_version":"2.7.16"},"common":{"workspace_id":"workspace-1234"},"reporter":{"satellite_id":"13235b49-3117-4e6c-a1d2-572567e57766","sub_manager_id":"13235b49-3117-4e6c-a1d2-572567e57766","insights_inventory_id":"13235b49-3117-4e6c-a1d2-572567e57766","ansible_host":"13235b49-3117-4e6c-a1d2-572567e57766"},"common_resource_data":{"workspace_id":"workspace-1234"}}}'
+JSON_TEMPLATE='{"type":"host","reporter_type":"hbi","reporter_instance_id":"13235b49-3117-4e6c-a1d2-572567e57766","representations":{"metadata":{"local_resource_id":"{{host.id}}","api_href":"https://apiHref.com/","console_href":"https://www.console.com/","reporter_version":"2.7.16"},"common":{"workspace_id":"workspace-1234"},"reporter":{"satellite_id":"13235b49-3117-4e6c-a1d2-572567e57766","sub_manager_id":"13235b49-3117-4e6c-a1d2-572567e57766","insights_inventory_id":"13235b49-3117-4e6c-a1d2-572567e57766","ansible_host":"13235b49-3117-4e6c-a1d2-572567e57766"}}}'
 
 # Check if required tools are available
 if ! command -v uuidgen &> /dev/null; then
