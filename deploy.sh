@@ -69,7 +69,7 @@ deploy() {
   -p rbac/MEMORY_LIMIT=512Mi \
   -p rbac/MEMORY_REQUEST=256Mi \
   -p rbac/V2_APIS_ENABLED=True -p rbac/V2_READ_ONLY_API_MODE=False -p rbac/V2_BOOTSTRAP_TENANT=True \
-  -p rbac/REPLICATION_TO_RELATION_ENABLED=True -p rbac/BYPASS_BOP_VERIFICATION=True \
+  -p rbac/REPLICATION_TO_RELATION_ENABLED=True \
   -p rbac/KAFKA_ENABLED=False -p rbac/NOTIFICATONS_ENABLED=False \
   -p rbac/NOTIFICATIONS_RH_ENABLED=False \
   -p rbac/ROLE_CREATE_ALLOW_LIST="remediations,\
