@@ -217,7 +217,7 @@ check_port_conflicts() {
 
     # Dynamically extract local ports from the forward section of the okteto template
     local conflict_ports
-    conflict_ports=($(grep -E '^\s*-\s*[0-9]+:[0-9]+' okteto/okteto.template.yaml | sed -e 's/^\s*-\s*//' -e 's/:.*//' | sort -u))
+    conflict_ports=($(grep -E '^\s*-\s*[0-9]{1,5}:[0-9]{1,5}' okteto/okteto.template.yaml | sed -e 's/^\s*-\s*//' -e 's/:.*//' | sort -u))
 
     if [[ ${#conflict_ports[@]} -eq 0 ]]; then
         log "✅ No ports to check in okteto.template.yaml."
@@ -228,6 +228,12 @@ check_port_conflicts() {
 
     local ports_in_use=()
     for port in "${conflict_ports[@]}"; do
+        # Add validation to prevent invalid ports
+        if [[ ! "$port" =~ ^[0-9]+$ ]] || [[ "$port" -lt 1 ]] || [[ "$port" -gt 65535 ]]; then
+            warn "⚠️  Invalid port number: $port"
+            continue
+        fi
+        
         if command -v lsof >/dev/null 2>&1 && lsof -i ":$port" >/dev/null 2>&1; then
             ports_in_use+=("$port")
         elif command -v ss >/dev/null 2>&1 && ss -ln | grep -q ":$port "; then
@@ -843,11 +849,11 @@ main() {
         exit 1
     fi
     
-    # Check if common ports are in use (Okteto typically uses these for SSH tunnels)
-    check_port_conflicts
-
     # Check if we're running on a safe (ephemeral) cluster
-    check_cluster_safety
+    check_cluster_safety || exit 1
+
+    # Check if common ports are in use (Okteto typically uses these for SSH tunnels)
+    check_port_conflicts || exit 1
     
     # Handle commands
     case "${1:-up}" in
