@@ -227,32 +227,51 @@ check_port_conflicts() {
     log "   Ports to check: ${conflict_ports[*]}"
 
     local ports_in_use=()
+    local port_processes=()
+    
     for port in "${conflict_ports[@]}"; do
-        # Add validation to prevent invalid ports
+        # Validate port number
         if [[ ! "$port" =~ ^[0-9]+$ ]] || [[ "$port" -lt 1 ]] || [[ "$port" -gt 65535 ]]; then
             warn "⚠️  Invalid port number: $port"
             continue
         fi
-        
-        if command -v lsof >/dev/null 2>&1 && lsof -i ":$port" >/dev/null 2>&1; then
+
+        local process_info=""
+        local port_in_use=false
+
+        # Try lsof first (most detailed)
+        if command -v lsof >/dev/null 2>&1; then
+            if lsof -i ":$port" >/dev/null 2>&1; then
+                port_in_use=true
+                process_info=$(lsof -i ":$port" 2>/dev/null | tail -1 | awk '{print $1, $2}')
+            fi
+        # Fallback to ss
+        elif command -v ss >/dev/null 2>&1; then
+            if ss -ln | grep -q ":$port "; then
+                port_in_use=true
+                process_info="(process details unavailable with ss)"
+            fi
+        # Fallback to netstat
+        elif command -v netstat >/dev/null 2>&1; then
+            if netstat -ln 2>/dev/null | grep -q ":$port "; then
+                port_in_use=true
+                process_info="(process details unavailable with netstat)"
+            fi
+        else
+            warn "⚠️  No port checking tools available (lsof, ss, netstat)"
+            return 0
+        fi
+
+        if [[ "$port_in_use" == "true" ]]; then
             ports_in_use+=("$port")
-        elif command -v ss >/dev/null 2>&1 && ss -ln | grep -q ":$port "; then
-            ports_in_use+=("$port")
-        elif command -v netstat >/dev/null 2>&1 && netstat -ln | grep -q ":$port "; then
-            ports_in_use+=("$port")
+            port_processes+=("$process_info")
         fi
     done
 
     if [[ ${#ports_in_use[@]} -gt 0 ]]; then
         error "❌ Port conflicts detected that will cause okteto SSH tunnel failures:"
-        for port in "${ports_in_use[@]}"; do
-            if command -v lsof >/dev/null 2>&1; then
-                local process
-                process=$(lsof -i ":$port" 2>/dev/null | tail -1 | awk '{print $1, $2}')
-                error "   Port $port is occupied by: $process"
-            else
-                error "   Port $port is occupied"
-            fi
+        for i in "${!ports_in_use[@]}"; do
+            error "   Port ${ports_in_use[$i]} is occupied by: ${port_processes[$i]}"
         done
         error ""
         error "🔧 To fix: Stop the processes using these ports"
