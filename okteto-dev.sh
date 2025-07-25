@@ -349,7 +349,7 @@ ensure_okteto_context() {
     fi
     
     # The `okteto context use` command can be interactive on first run.
-    # Providing the context name, namespace, and a builder should make it non-interactive.
+    # Providing the context name and namespace should make it non-interactive.
     # This creates the okteto config and prevents future prompts.
     if okteto context use "$current_kube_context" --namespace "$namespace" >/dev/null 2>&1; then
         log "✅ Successfully configured Okteto context."
