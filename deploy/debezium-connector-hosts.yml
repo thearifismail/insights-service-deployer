@@ -52,11 +52,10 @@ objects:
       transforms.addHeaders.type: "org.apache.kafka.connect.transforms.InsertHeader"
       transforms.addHeaders.header: "operation"
       transforms.addHeaders.value.literal: "migration"
-      # Filter and rename fields
+      # Filter only fields we want to migrate
       transforms.fieldFilter.type: "org.apache.kafka.connect.transforms.ReplaceField$Value"
-      transforms.fieldFilter.exclude: "deletion_timestamp,facts,last_check_in,modified_on,per_reporter_staleness,stale_timestamp,stale_warning_timestamp,tags,tags_alt"
-      transforms.fieldFilter.renames: "display_name:hostname,org_id:organization_id"
-      
+      transforms.fieldFilter.include: "id,ansible_host,insights_id,satellite_id,subscription_manager_id,groups"
+
 parameters:
 - name: ENV_NAME
   description: ClowdEnvironment name (ephemeral, stage, prod)
