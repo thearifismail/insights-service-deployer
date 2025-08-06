@@ -383,7 +383,7 @@ create_hbi_tables() {
     id uuid NOT NULL,
     aggregatetype character varying(255) NOT NULL,
     aggregateid character varying(255) NOT NULL,
-    operation character varying(255) NOT NULL,
+    event_type character varying(255) NOT NULL,
     payload jsonb
   );\""
 
