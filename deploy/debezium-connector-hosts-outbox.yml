@@ -27,7 +27,7 @@ objects:
       table.include.list: hbi.outbox
       transforms: outbox
       transforms.outbox.type: io.debezium.transforms.outbox.EventRouter
-      transforms.outbox.table.fields.additional.placement: event_type:header:operation
+      transforms.outbox.table.fields.additional.placement: operation:header,version:header
       transforms.outbox.table.expand.json.payload: true
       value.converter: org.apache.kafka.connect.json.JsonConverter
       plugin.name: pgoutput

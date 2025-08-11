@@ -22,7 +22,6 @@ objects:
       signal.kafka.topic: "host-inventory.signal"
       signal.kafka.bootstrap.servers: "${ENV_NAME}-kafka-bootstrap:9092"
       signal.data.collection: "hbi.signal"
-      snapshot.mode: "no_data"
       database.server.name: host-inventory-db
       database.dbname: ${secrets:host-inventory-db:db.name}
       database.hostname: ${secrets:host-inventory-db:db.host}
@@ -36,7 +35,7 @@ objects:
       heartbeat.action.query: ${DEBEZIUM_ACTION_QUERY}
       topic.heartbeat.prefix: ${TOPIC_HEARTBEAT_PREFIX}
       # Transform configurations
-      transforms: "route,unwrap,addMetadata,addHeaders,fieldFilter"
+      transforms: "route,unwrap,addMetadata,addOpHeader,addVerHeader,fieldFilter"
       # Extract new record state (flatten envelope)
       transforms.unwrap.type: "io.debezium.transforms.ExtractNewRecordState"
       transforms.unwrap.drop.tombstones: "false"
@@ -49,10 +48,12 @@ objects:
       transforms.addMetadata.static.field: "source_system"
       transforms.addMetadata.static.value: "host-inventory-db"
       # Add static headers
-      transforms.addHeaders.type: "org.apache.kafka.connect.transforms.InsertHeader"
-      transforms.addHeaders.header: "operation"
-      transforms.addHeaders.value.literal: "migration"
-      # Filter only fields we want to migrate
+      transforms.addOpHeader.type: "org.apache.kafka.connect.transforms.InsertHeader"
+      transforms.addOpHeader.header: "operation"
+      transforms.addOpHeader.value.literal: "migration"
+      transforms.addVerHeader.type: "org.apache.kafka.connect.transforms.InsertHeader"
+      transforms.addVerHeader.header: "version"
+      transforms.addVerHeader.value.literal: "v1beta2"
       transforms.fieldFilter.type: "org.apache.kafka.connect.transforms.ReplaceField$Value"
       transforms.fieldFilter.include: "id,ansible_host,insights_id,satellite_id,subscription_manager_id,groups"
 
