@@ -43,7 +43,7 @@ deploy() {
   HBI_CUSTOM_IMAGE_TAG=latest
   HBI_CUSTOM_IMAGE_PARAMETER=""
   LOCAL_SCHEMA_FILE=""
-  
+
   if [ -n "$1" ]; then
     HBI_DEPLOYMENT_TEMPLATE_REF="$1"
   else
@@ -366,25 +366,26 @@ create_hbi_connectors() {
 # TODO: remove this once we have a proper outbox table in the hbi db (RHINENG-19194)
 create_hbi_tables() {
   echo "Creating outbox and signal tables in host-inventory-db hbi schema..."
-  
+
   HOST_INVENTORY_DB_POD=$(oc get pods -l app=host-inventory,service=db,sub=local_db --no-headers -o custom-columns=":metadata.name" --field-selector=status.phase==Running | head -1)
-  
+
   if [ -z "$HOST_INVENTORY_DB_POD" ]; then
     echo "Error: Could not find host-inventory database pod"
     exit 1
   fi
-  
+
   echo "Using database pod: $HOST_INVENTORY_DB_POD"
-  
+
   # Create hbi schema if it doesn't exist
   oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"CREATE SCHEMA IF NOT EXISTS hbi;\""
-  
+
   # Create outbox table
   oc exec -it "$HOST_INVENTORY_DB_POD" -- /bin/bash -c "psql -d host-inventory -c \"CREATE TABLE IF NOT EXISTS hbi.outbox (
     id uuid NOT NULL,
     aggregatetype character varying(255) NOT NULL,
     aggregateid character varying(255) NOT NULL,
-    event_type character varying(255) NOT NULL,
+    operation character varying(255) NOT NULL,
+    version character varying(255) NOT NULL,
     payload jsonb
   );\""
 
@@ -499,7 +500,7 @@ case "$1" in
     ;;
   iqe)
     iqe
-    ;; 
+    ;;
   *)
     usage
     ;;
