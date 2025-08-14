@@ -47,19 +47,19 @@ Grab the host-inventory-db database `user` secret from the ephemeral environment
 oc get secrets host-inventory-db -o json | jq '.data["db.user"]' -r | base64 -d
 ```
 
-Now port forward to the host-inventory-db database
+Now port forward to the host-inventory database, host-inventory-db is the svc name
 ```bash
 oc port-forward service/host-inventory-db 5433:5432
 ```
 
 Next, insert the HBI records into the ephemeral environment database.
 ```bash
-psql -h localhost -p 5433 -U <user> -d host-inventory-db -f <path-to-generated-host-file>
+psql -h localhost -p 5433 -U <user> -d host-inventory -f <path-to-generated-host-file>
 ```
 
-You can validate the records are inserted by checking the `host-inventory-db` database:
+You can validate the records are inserted by checking the `host-inventory` database:
 ```bash
-psql -h localhost -p 5433 -U <user> -d host-inventory-db -c "select count(*) from hosts" -x
+psql -h localhost -p 5433 -U <user> -d host-inventory -c "select count(*) from hbi.hosts" -x
 ```
 
 ### Start the Migration
