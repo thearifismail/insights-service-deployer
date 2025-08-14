@@ -96,8 +96,6 @@ Thumbs.db
 
 # Insights service deployer
 /deploy/*
-!/deploy/debezium-connector-hosts.yml
-!/deploy/debezium-connector-hosts-outbox.yml
 
 **/hbi_outbox_inserts.sql
 
