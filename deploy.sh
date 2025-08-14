@@ -359,8 +359,15 @@ add_hosts_to_hbi() {
 create_hbi_connectors() {
   echo "Creating HBI debezium connectors..."
   NAMESPACE=env-$(oc project -q)
-  oc process -f ./deploy/debezium-connector-hosts.yml -p KAFKA_CONNECT_INSTANCE="kessel-kafka-connect" -p ENV_NAME="$NAMESPACE" | oc apply -f -
-  oc process -f ./deploy/debezium-connector-hosts-outbox.yml -p KAFKA_CONNECT_INSTANCE="kessel-kafka-connect" | oc apply -f -
+  oc process -f https://raw.githubusercontent.com/project-kessel/kessel-kafka-connect/refs/heads/main/deploy/sp-connectors/hbi-hosts-migration-connector.yml \
+    -p KAFKA_CONNECT_INSTANCE="kessel-kafka-connect" \
+    -p ENV_NAME="$NAMESPACE" \
+    -p BOOTSTRAP_SERVERS="${NAMESPACE}-kafka-bootstrap:9092" \
+    -p DB_SECRET_NAME="host-inventory-db" | oc apply -f -
+
+  oc process -f https://raw.githubusercontent.com/project-kessel/kessel-kafka-connect/refs/heads/main/deploy/sp-connectors/hbi-outbox-connector.yml \
+    -p KAFKA_CONNECT_INSTANCE="kessel-kafka-connect" \
+    -p DB_SECRET_NAME="host-inventory-db" | oc apply -f -
 }
 
 # TODO: remove this once we have a proper outbox table in the hbi db (RHINENG-19194)
