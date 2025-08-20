@@ -90,6 +90,7 @@ idmsvc" \
   -p rbac/V2_MIGRATION_RESOURCE_EXCLUDE_LIST="empty-exclude-list" \
   -p host-inventory/KESSEL_TARGET_URL=kessel-inventory-api.$NAMESPACE.svc.cluster.local:9000 \
   --set-image-tag "${HBI_CUSTOM_IMAGE}=${HBI_CUSTOM_IMAGE_TAG}" \
+  --set-image-tag quay.io/redhat-services-prod/rh-platform-experien-tenant/service-accounts="e187df2" \
   --set-image-tag quay.io/cloudservices/insights-inventory-frontend="${HOST_FRONTEND_GIT_COMMIT}" \
   --set-image-tag quay.io/redhat-services-prod/hcc-platex-services/chrome-service=latest \
   --set-image-tag quay.io/redhat-services-prod/hcc-accessmanagement-tenant/insights-rbac=latest \
