@@ -322,7 +322,7 @@ deploy_unleash_importer_image() {
   # Starts the job that runs the unleash feature flag import
   bonfire deploy rhsm --timeout=1800 --optional-deps-method none  \
     --frontends false --no-remove-resources app:rhsm \
-    -C rhsm -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE="$UNLEASH_IMAGE" \
+    -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE="$UNLEASH_IMAGE" \
     -p rhsm/SWATCH_UNLEASH_IMPORT_IMAGE_TAG="$UNLEASH_TAG"
 }
 
