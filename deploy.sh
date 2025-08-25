@@ -21,8 +21,8 @@ login() {
 
 check_bonfire_namespace() {
   NAMESPACE=`oc project -q 2>/dev/null || true`
-  if [[ -z $NAMESPACE ]]; then
-    echo "No bonfire namespace set, reserving a namespace for you now (duration 10hr)..."
+  if [[ -z $NAMESPACE || "${NAMESPACE}" == "default" ]]; then
+    echo "No bonfire namespace set or using 'default', reserving a namespace for you now (duration 10hr)..."
     bonfire namespace reserve --duration 10h
   fi
 }
