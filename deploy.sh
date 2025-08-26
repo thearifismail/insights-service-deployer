@@ -39,6 +39,9 @@ deploy() {
 
   NAMESPACE=`oc project -q`
 
+  # TODO - Remove later when ephemeral env is fixed to pull from RH Registry - For now patch the default SA
+  oc patch serviceaccount default -p '{"imagePullSecrets":[{"name":"rh-registry-pull"}]}'
+
   HBI_CUSTOM_IMAGE="quay.io/cloudservices/insights-inventory"
   HBI_CUSTOM_IMAGE_TAG=latest
   HBI_CUSTOM_IMAGE_PARAMETER=""
