@@ -152,7 +152,7 @@ force_seed_rbac_data_in_relations() {
 
 setup_kessel() {
   echo "Kessel inventory is setting up.."
-  bonfire deploy kessel -C kessel-inventory --set-image-tag quay.io/redhat-services-prod/project-kessel-tenant/kessel-inventory/inventory-api=latest
+  bonfire deploy kessel -C kessel-inventory -C kessel-relations --set-image-tag quay.io/redhat-services-prod/project-kessel-tenant/kessel-inventory/inventory-api=latest
 
   setup_sink_connector
 }
