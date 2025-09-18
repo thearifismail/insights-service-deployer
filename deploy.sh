@@ -440,6 +440,9 @@ case "$1" in
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4" "$5"
     wait_for_sink_connector_ready
+    setup_kessel_inventory_consumer
+    create_hbi_connectors
+    oc patch kafkaconnector "hbi-outbox-connector" --type='merge' -p='{"spec":{"state":"running"}}'
     add_users
     add_hosts_to_hbi
     show_bonfire_namespace
