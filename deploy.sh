@@ -170,20 +170,23 @@ apply_schema() {
   else
     # Download latest schema from rbac-config (default behavior)
     echo "Applying latest SpiceDB schema from rbac-config"
-    curl -o "$SCHEMA_FILE" https://raw.githubusercontent.com/RedHatInsights/rbac-config/refs/heads/master/configs/stage/schemas/schema.zed
+    curl -H 'Cache-Control: no-cache' -o  "$SCHEMA_FILE" https://raw.githubusercontent.com/RedHatInsights/rbac-config/refs/heads/master/configs/stage/schemas/schema.zed
     if [ $? -ne 0 ]; then
       echo "❌ ERROR: Failed to download schema from rbac-config"
       exit 1
     fi
   fi
+
+  # Delete the schema that was created already
+  oc delete configmap spicedb-schema
   # Apply the schema
   oc create configmap spicedb-schema --from-file="$SCHEMA_FILE" -o yaml --dry-run=client | oc apply -f -
   # Ensure the pods are using the new schema
   oc rollout restart deployment/kessel-relations-api
   # Clean up only if we downloaded the file
-  if [ -z "$LOCAL_SCHEMA_FILE" ]; then
-    rm "$SCHEMA_FILE"
-  fi
+  # if [ -z "$LOCAL_SCHEMA_FILE" ]; then
+  #   rm "$SCHEMA_FILE"
+  # fi
 }
 
 setup_sink_connector() {
@@ -466,6 +469,9 @@ case "$1" in
   host-replication-kafka)
     setup_kessel_inventory_consumer
     create_hbi_connectors
+    ;;
+  apply-schema)
+    apply_schema
     ;;
   iqe)
     iqe
