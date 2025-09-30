@@ -448,6 +448,7 @@ case "$1" in
     oc patch kafkaconnector "hbi-outbox-connector" --type='merge' -p='{"spec":{"state":"running"}}'
     add_users
     add_hosts_to_hbi
+    apply_schema "$5"
     show_bonfire_namespace
     ;;
   clean_download_debezium_configuration)
