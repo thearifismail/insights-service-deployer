@@ -471,7 +471,7 @@ case "$1" in
     create_hbi_connectors
     ;;
   apply-schema)
-    apply_schema
+    apply_schema "$2"
     ;;
   iqe)
     iqe
