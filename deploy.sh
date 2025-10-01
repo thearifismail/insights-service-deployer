@@ -410,6 +410,7 @@ usage() {
   echo "  add_hosts_to_hbi [org_id] [count]  Add test hosts to HBI"
   echo "  add_users                          Add test users"
   echo "  host-replication-kafka             Set up host replication kafka connectors/consumers"
+  echo "  apply-schema  [schema_file]        Applies the schema from the file in the arg, if no arg then the latest one from rbac-config"
   echo ""
   echo "Deploy Options:"
   echo "  template_ref    Git ref for host-inventory deploy template (default: latest commit)"
