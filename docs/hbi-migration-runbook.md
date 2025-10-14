@@ -8,8 +8,6 @@ This document describes how to test the HBI migration in the ephemeral environme
 - the latest `bonfire` installed
 - You have access to the ephemeral environment.
 - You have cloned the [insights service deployer repository](https://github.com/project-kessel/insights-service-deployer)
-- You have cloned the [db-generator repository](https://github.com/tonytheleg/db-generator) - this repo is private and **requires access**
-    - This repo generates host and outbox HBI records for insertion into the ephemeral environment database
 
 ## Steps
 
