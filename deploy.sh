@@ -152,7 +152,6 @@ setup_kessel() {
   echo "Kessel inventory is setting up.."
   bonfire deploy kessel -C kessel-inventory -C kessel-relations --set-image-tag quay.io/redhat-services-prod/project-kessel-tenant/kessel-inventory/inventory-api=latest
 
-  setup_sink_connector
 }
 
 apply_schema() {
@@ -188,11 +187,6 @@ apply_schema() {
   # if [ -z "$LOCAL_SCHEMA_FILE" ]; then
   #   rm "$SCHEMA_FILE"
   # fi
-}
-
-setup_sink_connector() {
-  echo "Relations sink connector is setting up.."
-  bonfire deploy kessel -C relations-sink-ephemeral
 }
 
 setup_kessel_inventory_consumer() {
@@ -382,13 +376,6 @@ add_users() {
   scripts/rbac_seed_users.sh
 }
 
-wait_for_sink_connector_ready() {
-  echo "Waiting for kessel sink connector to be ready..."
-  # For some reason, bonfire waits on kafkaconnect/inventory-kafka-connect during kessel-inventory deployment, but not
-  # on kafkaconnect/relations-sink during the sink connector deployment.
-  oc wait kafkaconnector/relations-sink-connector --for=condition=Ready --timeout=300s
-}
-
 iqe() {
     bonfire deploy-iqe-cji kessel-inventory --namespace `oc project -q` --debug-pod
 }
@@ -436,7 +423,6 @@ case "$1" in
     check_bonfire_namespace
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4" "$5"
-    wait_for_sink_connector_ready
     show_bonfire_namespace
     ;;
   deploy_with_hbi_demo)
@@ -444,7 +430,6 @@ case "$1" in
     check_bonfire_namespace
     deploy_unleash_importer_image
     deploy "$2" "$3" "$4" "$5"
-    wait_for_sink_connector_ready
     setup_kessel_inventory_consumer
     create_hbi_connectors
     oc patch kafkaconnector "hbi-outbox-connector" --type='merge' -p='{"spec":{"state":"running"}}'
